@@ -1,5 +1,5 @@
 """
-Geroinzo gallery — Flask server.
+Gallery — Flask server.
 
 Serves the Telegram Mini App, a small JSON API the front-end talks to, a
 password-protected admin panel, and a background thread that handles Telegram
@@ -53,6 +53,21 @@ app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
 
 db.init_db()
+
+# Shown when nothing has been named yet in the admin panel. Deliberately
+# generic — a copy of this app must never display someone else's name.
+DEFAULT_BRAND = "Gallery"
+
+
+def brand_name():
+    """The visible name of this copy, from the admin panel."""
+    return (db.get_settings().get("logo_text") or "").strip() or DEFAULT_BRAND
+
+
+@app.context_processor
+def inject_brand():
+    """Make the configured name available to every template."""
+    return {"brand": brand_name()}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
@@ -215,7 +230,7 @@ def api_invoice():
     payload = f"{item['id']}|{uid}|{purpose}"
 
     title = ("Unlock: " if purpose == "unlock" else "Support: ") + (
-        item["title"] or "Geroinzo"
+        item["title"] or brand_name()
     )
     description = (
         f"Unlock “{item['title']}” to view it."
@@ -339,7 +354,7 @@ def api_post_invoice():
     uid = str(data.get("uid") or "")
     amount = max(1, int(post["min_stars"]))
     payload = f"P{post['id']}|{uid}|donation"
-    title = ("Support: " + (post["title"] or "Geroinzo"))[:32]
+    title = ("Support: " + (post["title"] or brand_name()))[:32]
     description = f"Send {amount}★ to support this post."[:255]
     try:
         resp = requests.post(
@@ -372,7 +387,7 @@ def api_settings():
     """Public settings + social links for the topbar logo and About view."""
     settings = db.get_settings()
     return jsonify({
-        "logoText": settings.get("logo_text", "Geroinzo"),
+        "logoText": settings.get("logo_text", ""),
         "logoImage": (f"/static/media/{settings['logo_image']}"
                       if settings.get("logo_image") else ""),
         "aboutText": settings.get("about_text", ""),

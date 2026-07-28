@@ -9,8 +9,8 @@ REM ============================================================
 cd /d "%~dp0"
 
 echo Starting the gallery app...
-REM Port 5050 keeps Geroinzo off 5000, which is used by the other (ngrok) bot.
-start "geroinzo-app" cmd /k "set PORT=5050 && python app.py"
+REM Port 5050 keeps this app off 5000, which is used by the other (ngrok) bot.
+start "gallery-app" cmd /k "set PORT=5050 && python app.py"
 
 echo Waiting for the app to come up...
 timeout /t 3 >nul

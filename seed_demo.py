@@ -29,7 +29,7 @@ RED = "#FF2A2A"
 DEMO = [
     dict(slug="domo23", ghost="DOMO", accent=GREEN, type="video", size="tall",
          title="DOMO23", year="2023", date="18 · 10 · 24",
-         desc="TYPOGRAPHY BY GEROINZO\nMADE UNDER THE INFLUENCE",
+         desc="TYPOGRAPHY STUDY\nMADE UNDER THE INFLUENCE",
          is_locked=False, min_stars=1),
     dict(slug="golf_wang", ghost="FUCK\nTHAT", accent=None, type="photo", size="short",
          title="GOLF WANG", year="2024", date="02 · 03 · 24",
@@ -40,7 +40,7 @@ DEMO = [
          is_locked=False, min_stars=1),
     dict(slug="made_by", ghost="MADE\nBY", accent=GREEN, type="video", size="medium",
          title="MADE BY", year="2024", date="01 · 11 · 24",
-         desc="MADE BY GEROINZO\nCRT TELEVISION LOOP", is_locked=False, min_stars=1),
+         desc="CRT TELEVISION LOOP", is_locked=False, min_stars=1),
     dict(slug="sober_view", ghost="WHO\nNEEDS", accent=GREEN, type="photo", size="medium",
          title="WHO NEEDS A SOBER VIEW?", year="2024", date="11 · 06 · 26",
          desc="A TRIP BEYOND SIGHT & MIND\nLOCKED — UNLOCK WITH STARS",
@@ -92,7 +92,7 @@ def seed():
         )
 
     # Fill the About tab so the whole app looks complete in the demo.
-    db.set_setting("logo_text", "Geroinzo")
+    db.set_setting("logo_text", "Demo Studio")
     db.set_setting("about_text",
                    "Visual designer. Type, grunge, motion.\nMade under the influence.")
     if not db.list_social():

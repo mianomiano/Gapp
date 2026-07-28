@@ -1,5 +1,5 @@
 """
-SQLite storage for the Geroinzo gallery.
+SQLite storage for the gallery.
 
 Single file, zero install, auto-created on first run. Holds media metadata,
 likes, donations, content unlocks, social links, and app settings.
@@ -184,7 +184,7 @@ def init_db():
 
     # Seed default settings only if missing.
     defaults = {
-        "logo_text": "Geroinzo",
+        "logo_text": "",           # this copy's visible name, set in the admin panel
         "logo_image": "",          # filename in static/media; overrides logo_text when set
         "splash_enabled": "0",     # '0' off, '1' on
         "splash_filename": "",     # intro video in static/media
@@ -837,10 +837,9 @@ def wipe_all(reset_settings=True):
         "DELETE FROM social_links;"
     )
     if reset_settings:
-        conn.execute("UPDATE settings SET value = 'Geroinzo' WHERE key = 'logo_text'")
         conn.execute(
             "UPDATE settings SET value = '' "
-            "WHERE key IN ('logo_image', 'about_text', 'splash_filename')"
+            "WHERE key IN ('logo_text', 'logo_image', 'about_text', 'splash_filename')"
         )
         conn.execute("UPDATE settings SET value = '0' WHERE key = 'splash_enabled'")
     conn.commit()

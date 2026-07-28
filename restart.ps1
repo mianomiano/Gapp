@@ -1,4 +1,4 @@
-# Restart the Geroinzo gallery app on port 5050.
+# Restart the gallery app on port 5050.
 # Usage:  .\restart.ps1
 # Leaves the Cloudflare tunnel (cloudflared) running so the public URL stays the same.
 
@@ -24,7 +24,7 @@ Start-Process $python -ArgumentList 'app.py' -WorkingDirectory $appDir `
 Start-Sleep -Seconds 2
 $conn = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
 if ($conn) {
-    Write-Host "OK - Geroinzo is listening on $port (pid $($conn.OwningProcess))." -ForegroundColor Green
+    Write-Host "OK - the gallery is listening on $port (pid $($conn.OwningProcess))." -ForegroundColor Green
     Write-Host "If something looks wrong, check errors with:" -ForegroundColor DarkGray
     Write-Host "    Get-Content `"$appDir\app.err`" -Tail 20" -ForegroundColor DarkGray
 } else {

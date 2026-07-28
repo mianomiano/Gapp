@@ -1,9 +1,12 @@
-# Geroinzo — Gallery (Telegram Mini App)
+# Gallery (Telegram Mini App)
 
-A personal gallery, built as a gift. It runs as a Telegram Mini App: a grunge image/video
-wall, likes, and **Telegram Stars** support (donations, plus optional pay-to-unlock content).
-Everything — media, social links, logo, and an intro video — is managed from a simple
-**admin page**, so you never have to edit code.
+A personal gallery that runs as a Telegram Mini App: a grunge image/video wall, likes,
+and **Telegram Stars** support (donations, plus optional pay-to-unlock content).
+Everything — name, media, social links, logo, colours, fonts, language, and an intro
+video — is managed from a simple **admin page**, so you never have to edit code.
+
+Nothing identifies a particular owner: a fresh copy opens unnamed and empty, and whoever
+runs it sets their own name in the admin panel.
 
 ---
 

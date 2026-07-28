@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Geroinzo — Admin</title>
+  <title>{{ brand }} — Admin</title>
   <link rel="stylesheet" href="/static/vendor/tabler-icons.min.css" />
   <style>
     /* Admin panel has its OWN minimal styling — it is intentionally separate
@@ -164,7 +164,7 @@
 {% if not authed %}
   <!-- ── LOGIN ── -->
   <div class="login">
-    <h1>Geroinzo Admin</h1>
+    <h1>{{ brand }} Admin</h1>
     <p class="muted">Enter the admin password (set as ADMIN_PASSWORD in .env).</p>
     <form id="loginForm">
       <label>Password</label>
@@ -188,7 +188,7 @@
 
 {% else %}
   <!-- ── DASHBOARD ── -->
-  <h1>Geroinzo Admin</h1>
+  <h1>{{ brand }} Admin</h1>
   <p class="muted">Manage the gallery · <a href="/" target="_blank">view site ↗</a> ·
     <a href="#" id="logout">log out</a></p>
 
@@ -365,7 +365,7 @@
     <form id="telegramForm">
       <div class="row">
         <div><label>Bot @username (no @)</label>
-          <input type="text" name="bot_username" id="bot_username" placeholder="geroinzo_bot" /></div>
+          <input type="text" name="bot_username" id="bot_username" placeholder="my_bot" /></div>
         <div><label>Mini app short name</label>
           <input type="text" name="miniapp_name" id="miniapp_name" placeholder="gallery" /></div>
       </div>

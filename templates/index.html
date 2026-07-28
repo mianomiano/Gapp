@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Geroinzo — Gallery</title>
+  <title>{{ brand }}</title>
 
   <!-- Telegram Mini App SDK — required for window.Telegram.WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -1168,7 +1168,7 @@
     <header class="topbar">
       <div>
         <div class="topbar-eyebrow">made by</div>
-        <div class="topbar-name" id="logo">Geroinzo</div>
+        <div class="topbar-name" id="logo">{{ brand }}</div>
       </div>
       <div class="topbar-right">
         <div class="topbar-actions">
@@ -1829,18 +1829,20 @@
   /* ============================================================
      SHARE / FORWARD / COPY LINK (in the popup)
   ============================================================ */
-  let shareCtx = { link: '', title: 'Geroinzo' };
+  /* Untitled items fall back to this copy's own name, never a fixed brand. */
+  const BRAND = {{ brand | tojson }};
+  let shareCtx = { link: '', title: BRAND };
   function shareLink() { return shareCtx.link || MINIAPP || location.href; }
-  function shareTitle() { return shareCtx.title || 'Geroinzo'; }
+  function shareTitle() { return shareCtx.title || BRAND; }
   function setShareItem(id) {
     let link = MINIAPP || location.href;
     if (id && MINIAPP) link += (MINIAPP.includes('?') ? '&' : '?') + 'startapp=item' + id;
-    shareCtx = { link, title: MEDIA[id]?.title || 'Geroinzo' };
+    shareCtx = { link, title: MEDIA[id]?.title || BRAND };
   }
   function setSharePost(id, title) {
     let link = MINIAPP || location.href;
     if (id && MINIAPP) link += (MINIAPP.includes('?') ? '&' : '?') + 'startapp=post' + id;
-    shareCtx = { link, title: title || 'Geroinzo' };
+    shareCtx = { link, title: title || BRAND };
   }
   function tgShareUrl() {
     return 'https://t.me/share/url?url=' + encodeURIComponent(shareLink()) +
@@ -2110,7 +2112,7 @@
     if (s.logoImage) {
       aboutLogo.innerHTML = `<img class="about-logo-img" src="${s.logoImage}" alt="logo">`;
     } else {
-      aboutLogo.innerHTML = `<div class="topbar-name">${s.logoText || 'Geroinzo'}</div>`;
+      aboutLogo.innerHTML = `<div class="topbar-name">${s.logoText || BRAND}</div>`;
     }
     document.getElementById('aboutText').textContent = s.aboutText || '';
 
