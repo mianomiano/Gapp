@@ -169,5 +169,12 @@
   "admin.fonts_help": "woff2 is smallest. Uploading replaces the built-in font everywhere it is used.",
   "admin.font_display": "Display font (headings, logo text)",
   "admin.font_mono": "Interface font (labels, buttons)",
-  "admin.reset_defaults": "Reset to defaults"
+  "admin.reset_defaults": "Reset to defaults",
+  "admin.stars_heading": "Send Stars button",
+  "admin.stars_help": "Controls where the voluntary Send Stars button appears.",
+  "admin.stars_all": "Show everywhere",
+  "admin.stars_checked": "Only on items I tick",
+  "admin.stars_off": "Hide everywhere",
+  "admin.stars_unlock_note": "Locked items always keep their Unlock button, whatever this is set to — otherwise paid content could never be opened.",
+  "admin.show_stars_item": "Show Send Stars on this item"
 }

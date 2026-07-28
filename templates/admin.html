@@ -378,6 +378,20 @@
     </form>
   </div>
 
+  <h2>{{ t('admin.stars_heading') }}</h2>
+  <div class="card">
+    <p class="muted">{{ t('admin.stars_help') }}</p>
+    <form id="starsForm">
+      <select name="stars_mode" id="stars_mode">
+        <option value="all">{{ t('admin.stars_all') }}</option>
+        <option value="checked">{{ t('admin.stars_checked') }}</option>
+        <option value="off">{{ t('admin.stars_off') }}</option>
+      </select>
+      <p class="muted" style="margin-top:10px">{{ t('admin.stars_unlock_note') }}</p>
+      <button type="submit">{{ t('admin.save') }}</button>
+    </form>
+  </div>
+
   </section><!-- /appearance -->
 
   <!-- ══ SETTINGS TAB ══ -->
@@ -571,6 +585,11 @@
                <div><label>${T('admin.min_stars_short')}</label>
                  <input type="number" name="min_stars" min="1" value="${m.min_stars}"></div>
              </div>
+             <div class="check">
+               <input type="checkbox" name="show_stars" value="1" ${m.show_stars ? 'checked' : ''}>
+               <label>${T('admin.show_stars_item')}</label>
+             </div>
+             <input type="hidden" name="show_stars_present" value="1">
              <label>{{ t('admin.categories_max3') }}</label>
              <div class="cats-pick${CATEGORIES.length ? '' : ' empty'}">${catChecks((m.category_ids || '').split(','))}</div>
              <input type="hidden" name="category_ids_present" value="1">
@@ -763,6 +782,7 @@
       document.getElementById('contact_chat_id').value = s.contact_chat_id || '';
       document.getElementById('splash_enabled').checked = s.splash_enabled === '1';
       document.getElementById('language').value = s.language || 'en';
+      document.getElementById('stars_mode').value = s.stars_mode || 'all';
       document.getElementById('splashCurrent').textContent =
         s.splash_filename ? T('admin.current') + ' ' + s.splash_filename
                           : T('admin.no_intro');
@@ -830,6 +850,7 @@
     });
 
     settingsSubmit('appearanceForm', { reload: true });
+    settingsSubmit('starsForm');
 
     /* ── Categories ── */
     let CATEGORIES = [];
@@ -1021,6 +1042,11 @@
              ${hashtagAreaHTML(p.hashtags || '[]')}
              <label>{{ t('admin.stars_amount') }}</label>
              <input type="number" name="min_stars" value="${p.min_stars || 1}" min="1" style="max-width:140px">
+             <div class="check">
+               <input type="checkbox" name="show_stars" value="1" ${p.show_stars ? 'checked' : ''}>
+               <label>${T('admin.show_stars_item')}</label>
+             </div>
+             <input type="hidden" name="show_stars_present" value="1">
              <label>Current media (× to delete)</label>
              <div class="post-media-manage" data-postmedia="${p.id}"><span class="muted">${T('admin.loading')}</span></div>
              <label>${T('admin.add_more_media')}</label>

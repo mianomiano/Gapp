@@ -136,6 +136,26 @@ def save_upload(file_storage):
     return stored, type_for_ext(extension), width, height
 
 
+STARS_MODES = ("off", "all", "checked")
+DEFAULT_STARS_MODE = "all"
+
+
+def stars_visible(row):
+    """Whether the voluntary Send Stars button shows for this item.
+
+    Deliberately does NOT govern unlocking. The two share one button in the
+    UI, so gating unlocks on this setting would make locked content
+    permanently unviewable the moment donations were switched off — see
+    tests/test_stars.py.
+    """
+    mode = db.get_settings().get("stars_mode") or DEFAULT_STARS_MODE
+    if mode == "off":
+        return False
+    if mode == "checked":
+        return bool(row["show_stars"])
+    return True
+
+
 def media_public(item, tg_user_id=None):
     """Shape a media row for the public API, hiding src for locked items the
     current user has not unlocked."""
@@ -159,6 +179,10 @@ def media_public(item, tg_user_id=None):
         # the client then measures the element on load instead.
         "width": item["width"],
         "height": item["height"],
+        # Two separate flags on purpose: donations can be switched off, but a
+        # locked item must always keep a way to be unlocked.
+        "showStars": stars_visible(item),
+        "canUnlock": bool(item["is_locked"]),
     }
 
 
@@ -372,6 +396,7 @@ def api_post_one(post_id):
         "likes": db.post_like_total(post_id),
         "liked": db.user_liked_post(post_id, uid),
         "minStars": post["min_stars"],
+        "showStars": stars_visible(post),
     })
 
 
@@ -528,6 +553,11 @@ def admin_update_media(media_id):
     if request.form is not None and "category_ids_present" in request.form:
         fields["category_ids"] = ",".join(request.form.getlist("category_ids"))
         fields.pop("category_ids_present", None)
+    # An unchecked box sends nothing, so the marker distinguishes "cleared"
+    # from "not part of this form".
+    if "show_stars_present" in fields:
+        fields["show_stars"] = "1" if request.form.get("show_stars") else "0"
+        fields.pop("show_stars_present", None)
     db.update_media(media_id, fields)
     return jsonify({"ok": True})
 
@@ -723,6 +753,8 @@ def admin_update_post(post_id):
             fields[key] = request.form.get(key, "")
     if "category_ids_present" in request.form:
         fields["category_ids"] = ",".join(request.form.getlist("category_ids"))
+    if "show_stars_present" in request.form:
+        fields["show_stars"] = "1" if request.form.get("show_stars") else "0"
     db.update_post(post_id, fields)
     _save_post_media(post_id)        # any newly uploaded media appended
     return jsonify({"ok": True})
@@ -815,6 +847,13 @@ def admin_set_settings():
         stored = f"{stem}_{secrets.token_hex(4)}.{extension}"
         upload.save(FONTS_DIR / stored)
         db.set_setting(setting, stored)
+
+    # Stars mode is validated against the known set rather than stored raw —
+    # an unrecognised value would fall through to "show everywhere".
+    if "stars_mode" in request.form:
+        mode = request.form.get("stars_mode", "").strip()
+        if mode in STARS_MODES:
+            db.set_setting("stars_mode", mode)
 
     # Language: only accept codes that have a file on disk, so a bad value
     # cannot leave the app rendering raw keys.

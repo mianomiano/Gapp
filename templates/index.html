@@ -1550,7 +1550,10 @@
     likeCount.textContent = m.likes;
     likeBtn.classList.toggle('liked', !!m.liked);
 
-    /* Stars button reflects donate vs unlock */
+    /* Stars button reflects donate vs unlock. A locked item ALWAYS shows it,
+       whatever the Stars setting says — hiding it there would leave paid
+       content with no way to ever be unlocked. */
+    starBtn.style.display = (m.showStars || locked) ? '' : 'none';
     starLabel.textContent = locked
       ? `${T('app.unlock')} · ${m.minStars}★`
       : T('app.send_stars');
@@ -2003,11 +2006,14 @@
       `<button class="like-btn ${post.liked ? 'liked' : ''}" id="postLikeBtn"
                aria-label="${T('app.like')}">
          <i class="ti ti-heart"></i><span id="postLikeCount">${post.likes}</span>
-       </button>
-       <button class="star-btn" id="postStarBtn" aria-label="${T('app.send_stars')}">
-         <i class="ti ti-star"></i><span>${T('app.send_stars')}</span>
-       </button>
-       <button class="icon-btn" id="postShareBtn" aria-label="${T('app.share')}">
+       </button>` +
+      /* Posts are never locked, so this one simply obeys the setting. */
+      (post.showStars
+        ? `<button class="star-btn" id="postStarBtn" aria-label="${T('app.send_stars')}">
+             <i class="ti ti-star"></i><span>${T('app.send_stars')}</span>
+           </button>`
+        : '') +
+      `<button class="icon-btn" id="postShareBtn" aria-label="${T('app.share')}">
          <i class="ti ti-share"></i>
        </button>`;
     postReader.appendChild(actions);

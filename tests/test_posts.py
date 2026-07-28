@@ -75,3 +75,19 @@ def test_api_exposes_dimensions(admin_client, client):
     post_id = _post_with_media(admin_client, 1, size=(64, 16))
     media = client.get(f"/api/posts/{post_id}").get_json()["media"][0]
     assert media["width"] == 64 and media["height"] == 16
+
+
+def test_replacing_a_file_updates_its_dimensions(admin_client, client):
+    """Regression: update_media's allow-list dropped width/height, so a
+    replaced file kept the old file's shape and the cell rendered wrong."""
+    admin_client.post("/api/admin/media", data={
+        "file": (io.BytesIO(_png(100, 50)), "first.png"),
+    }, content_type="multipart/form-data")
+    media_id = client.get("/api/media").get_json()[0]["id"]
+
+    admin_client.patch(f"/api/admin/media/{media_id}", data={
+        "file": (io.BytesIO(_png(30, 90)), "second.png"),
+    }, content_type="multipart/form-data")
+
+    item = client.get(f"/api/media/{media_id}").get_json()
+    assert (item["width"], item["height"]) == (30, 90)

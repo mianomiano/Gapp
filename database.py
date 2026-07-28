@@ -121,6 +121,11 @@ def init_db():
         if col not in cols:
             cur.execute(f"ALTER TABLE media ADD COLUMN {col} INTEGER NOT NULL DEFAULT 0")
 
+    # Migration: per-item opt-in for the Send Stars button, used when the
+    # stars_mode setting is 'checked'.
+    if "show_stars" not in cols:
+        cur.execute("ALTER TABLE media ADD COLUMN show_stars INTEGER NOT NULL DEFAULT 0")
+
     # Migration: posts gain categories, hashtags, likes and a stars amount.
     pcols = [r["name"] for r in cur.execute("PRAGMA table_info(posts)").fetchall()]
     for col, ddl in (
@@ -128,6 +133,7 @@ def init_db():
         ("hashtags",     "ALTER TABLE posts ADD COLUMN hashtags TEXT NOT NULL DEFAULT ''"),
         ("likes",        "ALTER TABLE posts ADD COLUMN likes INTEGER NOT NULL DEFAULT 0"),
         ("min_stars",    "ALTER TABLE posts ADD COLUMN min_stars INTEGER NOT NULL DEFAULT 1"),
+        ("show_stars",   "ALTER TABLE posts ADD COLUMN show_stars INTEGER NOT NULL DEFAULT 0"),
     ):
         if col not in pcols:
             cur.execute(ddl)
@@ -310,13 +316,16 @@ def add_media(filename, m_type, title, description, date_label, year, size,
 def update_media(media_id, fields):
     """Update an allow-listed set of columns for one media row."""
     allowed = {"title", "description", "date_label", "year", "size",
-               "is_locked", "min_stars", "type", "filename", "category_ids"}
+               "is_locked", "min_stars", "type", "filename", "category_ids",
+               "width", "height", "show_stars"}
     sets, values = [], []
     for key, val in fields.items():
         if key not in allowed:
             continue
-        if key == "is_locked":
+        if key in ("is_locked", "show_stars"):
             val = 1 if val in (1, "1", True, "true", "on") else 0
+        if key in ("width", "height"):
+            val = max(0, int(val or 0))
         if key == "min_stars":
             val = max(0, int(val))
         if key == "category_ids":
@@ -449,11 +458,14 @@ def add_post(title, body, category_ids="", hashtags="", min_stars=1):
 
 
 def update_post(post_id, fields):
-    allowed = {"title", "body", "category_ids", "hashtags", "min_stars"}
+    allowed = {"title", "body", "category_ids", "hashtags", "min_stars",
+               "show_stars"}
     sets, values = [], []
     for key, val in fields.items():
         if key not in allowed:
             continue
+        if key == "show_stars":
+            val = 1 if val in (1, "1", True, "true", "on") else 0
         if key == "category_ids":
             val = normalize_category_ids(val)
         if key == "min_stars":
