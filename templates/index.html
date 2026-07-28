@@ -1138,10 +1138,17 @@
   </style>
 
   <!--
-    Tabler Icons — outline only, loaded from CDN.
+    Tabler Icons — outline only, self-hosted (see tools/vendor_assets.py).
     Usage: <i class="ti ti-photo"></i>
   -->
   <link rel="stylesheet" href="/static/vendor/tabler-icons.min.css" />
+
+  <!--
+    Appearance chosen in the admin panel. Last stylesheet in the document, so
+    its :root wins over the tokens above. Every value is pattern-validated in
+    theme.py before it gets here — see tests/test_theme.py.
+  -->
+  <style id="themeOverrides">{{ theme_css | safe }}</style>
 </head>
 
 <body>

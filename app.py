@@ -30,6 +30,7 @@ from werkzeug.utils import secure_filename
 
 import database as db
 import i18n
+import theme
 
 load_dotenv()
 
@@ -94,6 +95,7 @@ def inject_globals():
         "i18n_app_json": subset("nav.", "app.", "share."),
         "i18n_admin_json": subset("admin."),
         "languages": i18n.choices(),
+        "theme_css": theme.css_overrides(settings),
     }
 
 
