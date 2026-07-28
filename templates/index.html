@@ -72,6 +72,11 @@
       --font-mono:     'AppMono', ui-monospace, 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace;
       --font-stamp:    'AppMono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
 
+      /* Header logo box — matches the height the old eyebrow + name filled,
+         so an uploaded logo can never make the header taller. */
+      --logo-height: 36px;
+      --logo-max-w:  200px;
+
       /* Layout */
       --wall-gap:   3px;
       --cell-radius: 0;           /* grunge = no rounding anywhere */
@@ -208,13 +213,17 @@
       z-index: 10;
     }
 
-    .topbar-eyebrow {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      margin-bottom: 2px;
+    /* Header logo. Capped to the height the old eyebrow + name occupied, so
+       whatever a copy uploads in the admin panel cannot grow the header or
+       crowd out the action buttons. Wide marks shrink to fit --logo-max-w. */
+    .topbar-brand { min-width: 0; }
+    .topbar-logo-img {
+      display: block;
+      height: var(--logo-height);
+      width: auto;
+      max-width: var(--logo-max-w);
+      object-fit: contain;
+      object-position: left center;
     }
 
     .topbar-name {
@@ -1166,9 +1175,12 @@
 
     <!-- TOP BAR -->
     <header class="topbar">
-      <div>
-        <div class="topbar-eyebrow">made by</div>
+      <div class="topbar-brand" id="topbarBrand">
+        {% if brand_logo %}
+        <img class="topbar-logo-img" src="{{ brand_logo }}" alt="{{ brand }}" />
+        {% else %}
         <div class="topbar-name" id="logo">{{ brand }}</div>
+        {% endif %}
       </div>
       <div class="topbar-right">
         <div class="topbar-actions">
@@ -2103,9 +2115,17 @@
       s = await res.json();
     } catch (err) { return; }
 
-    /* Header shows the brand TEXT only — the logo image lives on the About page. */
-    const logo = document.getElementById('logo');
-    if (s.logoText) logo.textContent = s.logoText;
+    /* Header shows the uploaded logo when there is one, otherwise the name.
+       The server already rendered this; re-apply so a change in admin shows
+       without a restart. Height is capped by CSS, so any upload fits. */
+    const topbarBrand = document.getElementById('topbarBrand');
+    if (s.logoImage) {
+      topbarBrand.innerHTML =
+        `<img class="topbar-logo-img" src="${s.logoImage}" alt="">`;
+    } else {
+      topbarBrand.innerHTML =
+        `<div class="topbar-name" id="logo">${s.logoText || BRAND}</div>`;
+    }
 
     /* About view — logo image full-width, then the blurb. */
     const aboutLogo = document.getElementById('aboutLogo');

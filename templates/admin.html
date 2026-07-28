@@ -342,12 +342,15 @@
   <!-- LOGO -->
   <h2>Logo</h2>
   <div class="card">
-    <p class="muted">The top header shows the <b>logo text</b>. The <b>logo image</b> is shown
-      full-width on the <b>About page</b> (not in the header).</p>
+    <p class="muted">Upload a <b>logo image</b> and it replaces the name in the top header,
+      and also shows full-width on the <b>About page</b>. With no image, the header falls
+      back to the <b>logo text</b>. Leave both empty and the app is unnamed.</p>
+    <p class="muted">The header scales any logo down to fit its 36px slot, so it can never
+      push the buttons out — but a wide, short mark reads best. Transparent PNG is ideal.</p>
     <form id="logoForm">
-      <label>Logo text (top header)</label>
+      <label>Logo text (used when no image is uploaded)</label>
       <input type="text" name="logo_text" id="logo_text" />
-      <label>Logo image — shown full-width on the About page</label>
+      <label>Logo image — header + About page</label>
       <input type="file" name="logo_image" accept="image/*" />
       <div class="check">
         <input type="checkbox" id="clear_logo_image" name="clear_logo_image" value="1" />

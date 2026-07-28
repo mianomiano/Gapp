@@ -66,8 +66,17 @@ def brand_name():
 
 @app.context_processor
 def inject_brand():
-    """Make the configured name available to every template."""
-    return {"brand": brand_name()}
+    """Make the configured name and logo available to every template.
+
+    Rendered server-side so the header shows the right mark on first paint
+    instead of flashing the text name until /api/settings comes back.
+    """
+    settings = db.get_settings()
+    logo = (settings.get("logo_image") or "").strip()
+    return {
+        "brand": (settings.get("logo_text") or "").strip() or DEFAULT_BRAND,
+        "brand_logo": f"/static/media/{logo}" if logo else "",
+    }
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────
