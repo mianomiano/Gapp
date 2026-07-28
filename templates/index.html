@@ -572,7 +572,7 @@
       max-width: 460px;
       z-index: 50;
       display: flex;
-      gap: 4px;
+      align-items: stretch;
       padding: 6px;
       background: rgba(20, 20, 22, 0.92);
       border: 1px solid var(--border-hot);
@@ -586,38 +586,55 @@
        so hiding it outright is the only reliable fix. */
     body.viewer-open .bottom-nav { display: none; }
 
+    /* Magnetic pill indicator. Instead of sliding, it stretches to span both
+       tabs mid-travel then collapses onto the target — squash-and-stretch.
+       Driven by initPill() below, which rewrites the transition duration
+       between the two phases; no keyframes involved. */
+    .bnav-pill {
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      left: 0;
+      width: 0;
+      border-radius: 22px;
+      background: var(--c-active, var(--green));
+      box-shadow: 0 5px 16px -3px var(--c-active, var(--green));
+      transition: left 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                  width 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                  background 220ms ease, box-shadow 220ms ease;
+      pointer-events: none;
+      z-index: 0;
+    }
+
     .bnav-item {
       flex: 1;
+      min-width: 0;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 3px;
       border: 0;
       background: transparent;
       cursor: pointer;
-      padding: 9px 0;
-      border-radius: 22px;
+      padding: 11px 0;
       color: var(--text-faint);
-      /* overshoot easing gives the blob a gooey "pop" when it activates */
-      transition: background 0.32s cubic-bezier(0.3, 0.7, 0.4, 1.4),
-                  color 0.25s, transform 0.18s, box-shadow 0.3s;
+      position: relative;
+      z-index: 1;
+      transition: color 0.22s ease, transform 0.18s;
     }
-    .bnav-item i { font-size: 19px; color: inherit; }
-    .bnav-item span {
-      font-family: var(--font-mono);
-      font-size: 8px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
+    /* Icons only — the label is the aria-label, not visible text. */
+    .bnav-item i {
+      font-size: 20px;
       color: inherit;
+      transition: transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .bnav-item:active { transform: scale(0.9); }
 
-    /* Active blob — filled with the tab's own --c color */
-    .bnav-item.active {
-      background: var(--c, var(--green));
-      color: #0A0A0A;
-      box-shadow: 0 5px 16px -3px var(--c, var(--green));
+    .bnav-item.active { color: #0A0A0A; }
+    .bnav-item.active i { transform: translateY(-1px); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .bnav-pill { transition-duration: 1ms; }
+      .bnav-item i { transition: none; }
     }
 
     /* ============================================================
@@ -1296,26 +1313,29 @@
   <!-- /scroll-area -->
 
   <!-- ── BOTTOM NAV ── -->
+  <!-- Icons only. The tab name lives in aria-label, so screen readers still
+       announce it even though nothing is drawn. -->
   <nav class="bottom-nav" aria-label="{{ t('nav.aria') }}">
-    <button class="bnav-item active" data-view="wall" style="--c:#39E8A0" aria-label="{{ t('nav.wall') }}">
+    <span class="bnav-pill" id="bnavPill" aria-hidden="true"></span>
+    <button class="bnav-item active" data-view="wall" style="--c:#39E8A0"
+            aria-label="{{ t('nav.wall') }}" aria-current="page">
       <i class="ti ti-layout-grid"></i>
-      <span>{{ t('nav.wall') }}</span>
     </button>
-    <button class="bnav-item" data-view="posts" style="--c:#FFB020" aria-label="{{ t('nav.posts') }}">
+    <button class="bnav-item" data-view="posts" style="--c:#FFB020"
+            aria-label="{{ t('nav.posts') }}">
       <i class="ti ti-article"></i>
-      <span>{{ t('nav.posts') }}</span>
     </button>
-    <button class="bnav-item" data-view="video" style="--c:#FF4D4D" aria-label="{{ t('nav.video') }}">
+    <button class="bnav-item" data-view="video" style="--c:#FF4D4D"
+            aria-label="{{ t('nav.video') }}">
       <i class="ti ti-player-play"></i>
-      <span>{{ t('nav.video') }}</span>
     </button>
-    <button class="bnav-item" data-view="photo" style="--c:#2AABEE" aria-label="{{ t('nav.photo') }}">
+    <button class="bnav-item" data-view="photo" style="--c:#2AABEE"
+            aria-label="{{ t('nav.photo') }}">
       <i class="ti ti-photo"></i>
-      <span>{{ t('nav.photo') }}</span>
     </button>
-    <button class="bnav-item" data-view="about" style="--c:#B66BFF" aria-label="{{ t('nav.about') }}">
+    <button class="bnav-item" data-view="about" style="--c:#B66BFF"
+            aria-label="{{ t('nav.about') }}">
       <i class="ti ti-info-circle"></i>
-      <span>{{ t('nav.about') }}</span>
     </button>
   </nav>
 
@@ -1725,13 +1745,65 @@
     relayoutWall();   // widths may have changed while another view was open
   }
 
-  document.querySelector('.bottom-nav').addEventListener('click', e => {
+  /* Magnetic pill: the indicator stretches to cover both the old and new tab,
+     then collapses onto the target. Two CSS transitions whose duration is
+     rewritten between phases — no keyframes, so it stays interruptible. */
+  const bnav = document.querySelector('.bottom-nav');
+  const bnavItems = [...bnav.querySelectorAll('.bnav-item')];
+  const bnavPill = document.getElementById('bnavPill');
+  const PILL_INSET = 3;          // breathing room inside each tab
+  const PILL_A = 170, PILL_B = 260;   // stretch, then snap (ms)
+  const PILL_REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let pillIndex = Math.max(0, bnavItems.findIndex(t => t.classList.contains('active')));
+  let pillTimer = null;
+
+  const pillBox = i => ({
+    left: bnavItems[i].offsetLeft + PILL_INSET,
+    width: bnavItems[i].offsetWidth - PILL_INSET * 2,
+  });
+
+  function movePill(i, animate) {
+    if (!bnavItems[i] || !bnavItems[i].offsetWidth) return;   // nav not laid out yet
+    const to = pillBox(i);
+    bnavPill.style.setProperty('--c-active',
+      getComputedStyle(bnavItems[i]).getPropertyValue('--c').trim() || 'var(--green)');
+
+    if (!animate || PILL_REDUCED) {
+      bnavPill.style.transitionDuration = '0ms';
+      bnavPill.style.left = to.left + 'px';
+      bnavPill.style.width = to.width + 'px';
+      return;
+    }
+    const from = pillBox(pillIndex);
+    const l = Math.min(from.left, to.left);
+    const r = Math.max(from.left + from.width, to.left + to.width);
+
+    clearTimeout(pillTimer);
+    bnavPill.style.transitionDuration = PILL_A + 'ms';
+    bnavPill.style.left = l + 'px';
+    bnavPill.style.width = (r - l) + 'px';
+
+    pillTimer = setTimeout(() => {
+      bnavPill.style.transitionDuration = PILL_B + 'ms';
+      bnavPill.style.left = to.left + 'px';
+      bnavPill.style.width = to.width + 'px';
+    }, PILL_A);
+  }
+
+  bnav.addEventListener('click', e => {
     const btn = e.target.closest('.bnav-item');
     if (!btn) return;
-    document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+    const index = bnavItems.indexOf(btn);
+    bnavItems.forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
     btn.classList.add('active');
+    btn.setAttribute('aria-current', 'page');
+    if (index !== pillIndex) { movePill(index, true); pillIndex = index; }
     setView(btn.dataset.view);
   });
+
+  /* Place it once at boot and re-place on resize / rotation. */
+  movePill(pillIndex, false);
+  addEventListener('resize', () => movePill(pillIndex, false));
 
   /* ============================================================
      CATEGORY BUTTONS — gray 3D buttons (button gero.txt style),
