@@ -14,7 +14,7 @@ runs it sets their own name in the admin panel.
 
 ```bash
 git clone <this-repo-url>
-cd geroinzo-gallery
+cd gappallery
 
 cp .env.example .env          # then open .env and fill it in (see below)
 
@@ -145,7 +145,7 @@ This means **no webhook setup is required** — just keep `python app.py` runnin
 ## Project layout
 
 ```
-geroinzo-gallery/
+gappallery/
 ├── app.py            # Flask server, JSON API, admin, Stars payment poller
 ├── database.py       # SQLite schema + queries (auto-created)
 ├── seed_demo.py      # optional: fill with demo content for a preview

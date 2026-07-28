@@ -5,7 +5,7 @@
 $ErrorActionPreference = 'Stop'
 $port   = 5050
 $python = 'C:\Users\Shadow\AppData\Local\Programs\Python\Python314\python.exe'
-$appDir = 'C:\GEROINZO\geroinzo-gallery'
+$appDir = 'C:\GAAP\gappallery'
 
 Write-Host "Stopping anything on port $port ..." -ForegroundColor Yellow
 $conn = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue

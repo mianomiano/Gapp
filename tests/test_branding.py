@@ -7,10 +7,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Code and markup. Scripts keep real filesystem paths (C:\GEROINZO\...) and
-# are checked separately below.
 CODE = ["app.py", "database.py", "templates/index.html", "templates/admin.html",
-        "seed_demo.py", "reset.py"]
+        "seed_demo.py", "reset.py", "storage.py", "theme.py", "i18n.py",
+        "restart.ps1", "share.bat", "tools/vendor_assets.py"]
 
 
 def test_no_brand_name_in_code():
@@ -25,9 +24,7 @@ def test_no_brand_name_in_code():
 
 def test_readme_has_no_brand_name():
     text = (ROOT / "README.md").read_text(encoding="utf-8")
-    # The directory name is a real path and may stay; prose may not.
-    prose = text.replace("geroinzo-gallery", "")
-    assert "geroinzo" not in prose.lower()
+    assert "geroinzo" not in text.lower()
 
 
 def test_default_logo_text_is_neutral(temp_db):

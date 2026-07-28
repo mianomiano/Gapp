@@ -2,7 +2,7 @@
 
 Run from the repo root:   python tools/vendor_assets.py
 Optionally convert local fonts too:
-                          python tools/vendor_assets.py "C:\\GEROINZO\\fonts"
+                          python tools/vendor_assets.py "C:\\GAAP\\fonts"
 
 Commit whatever it writes. Re-run only to bump the pinned version.
 """
