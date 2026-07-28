@@ -1,4 +1,13 @@
 flask>=3.0
 python-dotenv>=1.0
 requests>=2.31
+
+# Production WSGI server. app.py uses it automatically when present and
+# falls back to Flask's development server when it is not.
+waitress>=3.0
+
+# Cloudflare R2 (S3-compatible). Only used when the R2_* variables are set;
+# without them the app stores media on local disk and never imports this.
+boto3>=1.34
+
 pytest>=8.0

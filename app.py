@@ -31,6 +31,7 @@ from werkzeug.utils import secure_filename
 import database as db
 import i18n
 import imagesize
+import storage
 import theme
 
 load_dotenv()
@@ -92,7 +93,7 @@ def inject_globals():
 
     return {
         "brand": (settings.get("logo_text") or "").strip() or DEFAULT_BRAND,
-        "brand_logo": f"/static/media/{logo}" if logo else "",
+        "brand_logo": media_url(logo),
         "lang": lang,
         "t": lambda key: strings.get(key, key),
         "i18n_app_json": subset("nav.", "app.", "share."),
@@ -110,6 +111,14 @@ def ext_of(filename):
 
 def type_for_ext(extension):
     return "video" if extension in VIDEO_EXT else "photo"
+
+
+def media_url(filename):
+    """Public URL for a stored file — a local /static path or an R2 URL,
+    depending on how this copy is configured. Empty in, empty out, so callers
+    can pass an unset setting straight through."""
+    filename = (filename or "").strip()
+    return storage.backend().url(filename) if filename else ""
 
 
 def save_upload(file_storage):
@@ -132,7 +141,7 @@ def save_upload(file_storage):
     file_storage.stream.seek(0)
     width, height = imagesize.dimensions(header)
 
-    file_storage.save(MEDIA_DIR / stored)
+    storage.backend().save(stored, file_storage.stream)
     return stored, type_for_ext(extension), width, height
 
 
@@ -174,7 +183,7 @@ def media_public(item, tg_user_id=None):
         "likes": db.like_total(item["id"]),
         "liked": db.user_liked(item["id"], tg_user_id),
         "categories": [int(x) for x in (item.get("category_ids") or "").split(",") if x],
-        "src": f"/static/media/{item['filename']}" if unlocked else "",
+        "src": media_url(item["filename"]) if unlocked else "",
         # 0 when unknown (videos, or rows predating the width/height columns);
         # the client then measures the element on load instead.
         "width": item["width"],
@@ -360,7 +369,7 @@ def api_posts():
     result = []
     for p in db.list_posts():
         media = db.list_post_media(p["id"])
-        cover = f"/static/media/{media[0]['filename']}" if media else ""
+        cover = media_url(media[0]["filename"]) if media else ""
         text = " ".join(re.sub(r"<[^>]+>", " ", p["body"] or "").split())
         result.append({
             "id": p["id"],
@@ -458,12 +467,10 @@ def api_settings():
     settings = db.get_settings()
     return jsonify({
         "logoText": settings.get("logo_text", ""),
-        "logoImage": (f"/static/media/{settings['logo_image']}"
-                      if settings.get("logo_image") else ""),
+        "logoImage": media_url(settings.get("logo_image")),
         "aboutText": settings.get("about_text", ""),
         "splashEnabled": settings.get("splash_enabled") == "1",
-        "splashSrc": (f"/static/media/{settings['splash_filename']}"
-                      if settings.get("splash_filename") else ""),
+        "splashSrc": media_url(settings.get("splash_filename")),
         "miniAppLink": _miniapp_link(settings),
         "social": [
             {"platform": s["platform"], "url": s["url"], "label": s["label"],
@@ -901,19 +908,14 @@ def admin_set_settings():
 
 
 def _remove_file(filename):
-    """Delete a file from static/media, ignoring if it is missing or shared."""
-    if not filename:
-        return
-    # Never delete a file still referenced by another media row / setting.
-    target = MEDIA_DIR / filename
-    try:
-        if target.exists():
-            target.unlink()
-    except OSError:
-        pass
+    """Delete a stored file, ignoring if it is already gone. Best-effort in
+    both backends — a failed delete leaves an orphan, never a broken page."""
+    if filename:
+        storage.backend().delete(filename)
 
 
-# Explicit static route (Flask serves /static by default, kept for clarity).
+# Explicit static route. Only reached when media lives on local disk; with R2
+# configured the URLs point at the bucket and never come back here.
 @app.route("/static/media/<path:filename>")
 def media_file(filename):
     return send_from_directory(MEDIA_DIR, filename)
@@ -1006,7 +1008,30 @@ def start_poller():
     thread.start()
 
 
-if __name__ == "__main__":
+def serve():
+    """Run the app, preferring a production server when one is installed.
+
+    Everything starts from here rather than from a WSGI entry point on
+    purpose: start_poller() only runs under __main__, so launching this app
+    with `gunicorn app:app` would serve pages perfectly while silently never
+    processing a single Stars payment. Keep the start command `python app.py`.
+
+    Only ever run ONE instance. The poller uses Telegram long-polling, and a
+    second one causes getUpdates conflicts that break payments for both.
+    """
     start_poller()
-    # threaded=True so the poller and requests run concurrently.
-    app.run(host="0.0.0.0", port=PORT, threaded=True)
+    try:
+        from waitress import serve as waitress_serve
+    except ImportError:
+        print("[server] waitress not installed — using the Flask development "
+              "server. Fine locally; install waitress for deployment.")
+        # threaded=True so the poller and requests run concurrently.
+        app.run(host="0.0.0.0", port=PORT, threaded=True)
+        return
+
+    print(f"[server] waitress on 0.0.0.0:{PORT}")
+    waitress_serve(app, host="0.0.0.0", port=PORT, threads=8)
+
+
+if __name__ == "__main__":
+    serve()

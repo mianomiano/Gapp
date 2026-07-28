@@ -32,11 +32,19 @@ def app(temp_db, tmp_path, monkeypatch):
     .woff2 files into static/fonts before FONTS_DIR was added below.
     """
     import app as app_module
+    import storage
 
     for attr, name in (("MEDIA_DIR", "media"), ("FONTS_DIR", "fonts")):
         target = tmp_path / name
         target.mkdir()
         monkeypatch.setattr(app_module, attr, target)
+
+    # Uploads go through the storage layer, which keeps its own path and
+    # caches its backend. Both must be redirected or tests write into the
+    # real static/media — and R2 credentials in the environment would send
+    # test uploads to the live bucket.
+    monkeypatch.setattr(storage, "LOCAL_DIR", tmp_path / "media")
+    monkeypatch.setattr(storage, "_BACKEND", storage.LocalStorage())
 
     app_module.app.config.update(TESTING=True, SECRET_KEY="test-key")
     return app_module.app

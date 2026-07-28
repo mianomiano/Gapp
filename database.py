@@ -7,12 +7,17 @@ likes, donations, content unlocks, social links, and app settings.
 Everything here uses plain sqlite3 from the standard library — nothing to set up.
 """
 
+import os
 import sqlite3
 import time
 from pathlib import Path
 
-# The .db file lives next to this script.
-DB_PATH = Path(__file__).resolve().parent / "gallery.db"
+# Next to this script by default. Hosts with an ephemeral filesystem
+# (Railway, Fly, Render) must point DB_PATH at a mounted volume, or every
+# redeploy starts from an empty gallery.
+DB_PATH = Path(os.environ.get("DB_PATH")
+               or Path(__file__).resolve().parent / "gallery.db")
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 def get_conn():
