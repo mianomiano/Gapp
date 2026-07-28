@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geroinzo — Admin</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    /* Admin panel has its OWN minimal styling — it is intentionally separate
+       from the gallery's locked design. Functional, dark, no frills. */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      background: #0c0c0e; color: #e8e4dc;
+      max-width: 1200px; margin: 0 auto; padding: 18px 24px 60px;
+      font-size: 14px; line-height: 1.5;
+    }
+    h1 { font-size: 18px; letter-spacing: 0.04em; margin-bottom: 4px; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em;
+         color: #9a958c; margin: 26px 0 12px; border-bottom: 1px solid #2a2a30;
+         padding-bottom: 6px; }
+    .muted { color: #7a7672; font-size: 12px; }
+    a { color: #39e8a0; }
+
+    section { margin-top: 8px; }
+    .card { background: #141417; border: 1px solid #2a2a30; padding: 14px; margin-bottom: 12px; }
+
+    label { display: block; font-size: 11px; text-transform: uppercase;
+            letter-spacing: 0.08em; color: #9a958c; margin: 10px 0 4px; }
+    input[type=text], input[type=number], input[type=password], textarea, select {
+      width: 100%; background: #0c0c0e; border: 1px solid #2a2a30; color: #e8e4dc;
+      padding: 9px 10px; font: inherit; font-size: 13px;
+    }
+    textarea { resize: vertical; min-height: 60px; }
+    input[type=file] { width: 100%; font-size: 12px; color: #9a958c; margin-top: 4px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 120px; }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+    .check input { width: auto; }
+    .check label { margin: 0; }
+
+    button {
+      background: #39e8a0; color: #07140d; border: 0; padding: 9px 16px;
+      font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+      text-transform: uppercase; letter-spacing: 0.06em; margin-top: 14px;
+    }
+    button.ghost { background: transparent; color: #e8e4dc; border: 1px solid #2a2a30; }
+    button.danger { background: transparent; color: #ff6a6a; border: 1px solid #5a2a2a; }
+    button:active { opacity: 0.8; }
+
+    .item {
+      display: flex; align-items: center; gap: 12px; background: #141417;
+      border: 1px solid #2a2a30; padding: 10px; margin-bottom: 8px;
+    }
+    .item .thumb { width: 52px; height: 52px; object-fit: cover; background: #000;
+                   flex-shrink: 0; border: 1px solid #2a2a30; }
+    .item .meta { flex: 1; min-width: 0; }
+    .item .meta b { display: block; font-size: 13px; }
+    .item .meta small { color: #7a7672; }
+    .item .handle { cursor: grab; color: #555; padding: 0 4px; }
+    .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border: 1px solid #2a2a30;
+           text-transform: uppercase; letter-spacing: 0.06em; color: #9a958c; }
+    .tag.lock { color: #ff6a6a; border-color: #5a2a2a; }
+    .media-entry { margin-bottom: 8px; }
+    .media-entry .item { margin-bottom: 0; }
+    .media-entry.dragging { opacity: 0.4; }
+    .editbox { background: #101013; border: 1px solid #2a2a30; border-top: 0;
+               padding: 4px 14px 14px; }
+    .editbox[hidden] { display: none; }
+    .editbox button { margin-right: 8px; }
+    .item button { margin-top: 0; }
+    .cats-pick { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; }
+    .cats-pick.empty::before { content: 'No categories yet — add some below.'; color: #7a7672; font-size: 12px; }
+    .cats-pick label { margin: 0; display: flex; align-items: center; gap: 6px;
+                       text-transform: none; letter-spacing: 0; color: #e8e4dc; font-size: 13px; }
+    .cats-pick input { width: auto; }
+    .media-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .media-pick label { position: relative; margin: 0; width: 64px; cursor: pointer; }
+    .media-pick img, .media-pick video { width: 64px; height: 64px; object-fit: cover;
+        border: 2px solid #2a2a30; display: block; background: #000; }
+    .media-pick input { position: absolute; top: 4px; left: 4px; width: auto; z-index: 1; }
+    .media-pick input:checked + img, .media-pick input:checked + video { border-color: #39e8a0; }
+    .media-pick .mp-empty { color: #7a7672; font-size: 12px; }
+    /* Rich text editor */
+    .rte { border: 1px solid #2a2a30; }
+    .rte-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+        padding: 6px; background: #0c0c0e; border-bottom: 1px solid #2a2a30; }
+    .rte-toolbar button { margin: 0; padding: 4px 9px; background: #1a1a1e; color: #e8e4dc;
+        border: 1px solid #2a2a30; font-size: 13px; text-transform: none; letter-spacing: 0; }
+    .rte-toolbar button:active { background: #2a2a30; }
+    .rte-color { display: inline-flex; align-items: center; gap: 4px; margin: 0; padding: 0 4px;
+        color: #9a958c; font-size: 11px; }
+    .rte-color input { width: 26px; height: 24px; padding: 0; border: 1px solid #2a2a30; background: none; }
+    .rte-emojis { display: inline-flex; flex-wrap: wrap; gap: 2px; }
+    .rte-emojis button { padding: 3px 5px; font-size: 15px; background: transparent; border: 0; }
+    .rte-editor { min-height: 120px; padding: 10px 12px; font-family: inherit; font-size: 14px;
+        line-height: 1.6; outline: none; }
+    .rte-editor:empty::before { content: 'The long read…'; color: #5a564f; }
+    /* Restore list indent (global reset zeroes ul/ol padding -> markers escape the box). */
+    .rte-editor ul, .rte-editor ol { padding-left: 1.6em; margin: 6px 0; }
+    .rte-editor li { margin: 3px 0; }
+    /* Hashtag builder */
+    .hashtag-build { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+    .hashtag-build .ht-input { flex: 1; }
+    .hashtag-build .ht-color { width: 34px; height: 34px; padding: 0; }
+    .hashtag-build .ht-add { margin: 0; }
+    .hashtag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .ht-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
+        padding: 2px 4px 2px 8px; border: 1px solid var(--htc, #888); color: var(--htc, #888); }
+    .ht-chip .ht-del { margin: 0; padding: 0 5px; background: transparent; border: 0; color: inherit; font-size: 14px; }
+    /* Post media manager (in edit form) */
+    .post-media-manage { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .pm-item { position: relative; width: 64px; height: 64px; border: 1px solid #2a2a30; }
+    .pm-item img, .pm-item video { width: 100%; height: 100%; object-fit: cover; display: block; background:#000; }
+    .pm-item .pm-del { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px;
+        border-radius: 50%; background: #ff6a6a; color: #07140d; border: 0; margin: 0; padding: 0;
+        font-size: 13px; line-height: 20px; cursor: pointer; }
+    .pm-badge { position: absolute; bottom: 0; left: 0; right: 0; font-size: 9px; text-align: center;
+        background: rgba(0,0,0,0.6); color: #39e8a0; }
+    .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+             background: #1e1e22; border: 1px solid #2a2a30; padding: 10px 16px;
+             font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+    .login { max-width: 320px; margin: 60px auto; }
+    /* Tabs */
+    .tab-nav { display: flex; flex-wrap: wrap; gap: 4px; position: sticky; top: 0;
+        background: #0c0c0e; padding: 10px 0; margin: 8px 0 4px; z-index: 5;
+        border-bottom: 1px solid #2a2a30; }
+    .tab-btn { margin: 0; background: transparent; color: #9a958c; border: 1px solid #2a2a30;
+        padding: 8px 14px; font-size: 12px; }
+    .tab-btn.active { background: #39e8a0; color: #07140d; }
+    .tab-btn .tab-count { display: inline-block; background: #ff6a6a; color: #07140d;
+        border-radius: 9px; padding: 0 6px; font-size: 10px; margin-left: 6px; vertical-align: middle; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    /* Messages */
+    .msg { background: #141417; border: 1px solid #2a2a30; padding: 10px 12px; margin-bottom: 8px; }
+    .msg.unseen { border-left: 2px solid #39e8a0; }
+    .msg-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .msg-from { color: #39e8a0; font-size: 13px; }
+    .msg-time { color: #7a7672; font-size: 11px; }
+    .msg-body { margin-top: 6px; white-space: pre-wrap; font-size: 13px; }
+    .msg .danger { margin-top: 8px; padding: 4px 10px; font-size: 11px; }
+    /* Stats */
+    .stats-sub { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+        color: #9a958c; margin: 18px 0 6px; }
+    .stats-overall { display: flex; gap: 22px; flex-wrap: wrap; margin: 4px 0 6px; }
+    .stats-overall .so-num { font-size: 22px; color: #e8e4dc; }
+    .stats-overall .so-lbl { font-size: 11px; color: #7a7672; text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-badge { display: inline-block; background: #39e8a0; color: #07140d;
+        border-radius: 10px; padding: 1px 9px; font-size: 11px; font-weight: 600;
+        letter-spacing: 0; text-transform: none; margin-left: 8px; vertical-align: middle; }
+    .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .stats-table th, .stats-table td { padding: 8px 10px; border-bottom: 1px solid #2a2a30; text-align: left; }
+    .stats-table th { color: #9a958c; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .stats-table td.num, .stats-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .stats-table tfoot td { border-bottom: 0; border-top: 1px solid #2a2a30; color: #9a958c; }
+    .stats-row.changed td:first-child { box-shadow: inset 2px 0 0 #39e8a0; }
+    .stat-delta { color: #39e8a0; font-size: 11px; margin-left: 5px; }
+  </style>
+</head>
+<body>
+
+{% if not authed %}
+  <!-- ── LOGIN ── -->
+  <div class="login">
+    <h1>Geroinzo Admin</h1>
+    <p class="muted">Enter the admin password (set as ADMIN_PASSWORD in .env).</p>
+    <form id="loginForm">
+      <label>Password</label>
+      <input type="password" id="password" autocomplete="current-password" required />
+      <button type="submit">Log in</button>
+      <span class="muted" id="loginError"></span>
+    </form>
+  </div>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const res = await fetch('/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: document.getElementById('password').value }),
+      });
+      if (res.ok) location.reload();
+      else document.getElementById('loginError').textContent = ' Wrong password.';
+    });
+  </script>
+
+{% else %}
+  <!-- ── DASHBOARD ── -->
+  <h1>Geroinzo Admin</h1>
+  <p class="muted">Manage the gallery · <a href="/" target="_blank">view site ↗</a> ·
+    <a href="#" id="logout">log out</a></p>
+
+  <!-- TAB NAV -->
+  <nav class="tab-nav" id="tabNav">
+    <button class="tab-btn active" data-tab="media">Media</button>
+    <button class="tab-btn" data-tab="posts">Posts</button>
+    <button class="tab-btn" data-tab="stats">Stats <span class="stat-badge" id="statsTabBadge" hidden></span></button>
+    <button class="tab-btn" data-tab="messages">Messages <span class="tab-count" id="msgTabBadge" hidden></span></button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+  </nav>
+
+  <!-- ══ MEDIA TAB ══ -->
+  <section class="tab-panel active" data-tab="media">
+
+  <!-- ADD MEDIA -->
+  <h2>Add media</h2>
+  <div class="card">
+    <form id="addMediaForm">
+      <label>File (image or video)</label>
+      <input type="file" name="file" accept="image/*,video/*" required />
+      <div class="row">
+        <div><label>Title</label><input type="text" name="title" /></div>
+        <div><label>Type</label>
+          <select name="type">
+            <option value="">Auto-detect</option>
+            <option value="photo">Photo</option>
+            <option value="video">Video</option>
+          </select>
+        </div>
+      </div>
+      <label>Description</label>
+      <textarea name="description" placeholder="Two lines look best"></textarea>
+      <div class="row">
+        <div><label>Date label</label><input type="text" name="date_label" placeholder="18 · 10 · 24" /></div>
+        <div><label>Year</label><input type="text" name="year" placeholder="2024" /></div>
+        <div><label>Wall size</label>
+          <select name="size">
+            <option value="medium">Medium</option>
+            <option value="tall">Tall</option>
+            <option value="short">Short</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="check">
+          <input type="checkbox" id="is_locked" name="is_locked" value="1" />
+          <label for="is_locked">Lock — viewers pay Stars to see it</label>
+        </div>
+        <div><label>Min stars (unlock / donation)</label>
+          <input type="number" name="min_stars" value="1" min="1" /></div>
+      </div>
+      <label>Categories (choose up to 3)</label>
+      <div id="addCats" class="cats-pick"></div>
+      <button type="submit">Add to wall</button>
+    </form>
+  </div>
+
+  <!-- CATEGORIES -->
+  <h2>Categories</h2>
+  <div class="card">
+    <p class="muted">Create the buttons shown across the top of the gallery. A post can belong to up to 3.</p>
+    <form id="addCategoryForm">
+      <label>New category name</label>
+      <input type="text" name="name" placeholder="e.g. Posters" />
+      <button type="submit">Add category</button>
+    </form>
+    <div id="categoryList" style="margin-top:12px"></div>
+  </div>
+
+  <!-- MEDIA LIST -->
+  <h2>Wall — drag to reorder</h2>
+  <div id="mediaList"></div>
+
+  </section><!-- /media -->
+
+  <!-- ══ POSTS TAB ══ -->
+  <section class="tab-panel" data-tab="posts">
+
+  <!-- POSTS -->
+  <h2>Posts (long reads)</h2>
+  <div class="card">
+    <p class="muted">An article with rich text, its own uploaded images (expanding gallery, up to 15)
+      and videos, categories, colored hashtags, plus like / stars / share.</p>
+    <form id="addPostForm" enctype="multipart/form-data">
+      <label>Title</label>
+      <input type="text" name="title" />
+      <label>Body</label>
+      <div id="addBodyMount"></div>
+      <label>Categories</label>
+      <div id="postAddCats" class="cats-pick"></div>
+      <input type="hidden" name="category_ids_present" value="1">
+      <div id="addHashMount"></div>
+      <label>Stars amount (support)</label>
+      <input type="number" name="min_stars" value="1" min="1" style="max-width:140px">
+      <label>Upload images &amp; videos — images become the expanding gallery, videos go to extra media</label>
+      <input type="file" name="media" accept="image/*,video/*" multiple>
+      <button type="submit">Create post</button>
+    </form>
+    <div id="postList" style="margin-top:12px"></div>
+  </div>
+
+  </section><!-- /posts -->
+
+  <!-- ══ STATS TAB ══ -->
+  <section class="tab-panel" data-tab="stats">
+  <h2>Stats <span id="statsBadge" class="stat-badge" hidden></span></h2>
+  <div class="card">
+    <p class="muted">Whole-app, per-photo and per-post engagement. Numbers in
+      <span style="color:#39e8a0">green</span> are new since you last checked.</p>
+    <div id="statsBox"><p class="muted">loading…</p></div>
+    <button id="statsSeen" class="ghost">Mark all as seen</button>
+  </div>
+  </section><!-- /stats -->
+
+  <!-- ══ MESSAGES TAB ══ -->
+  <section class="tab-panel" data-tab="messages">
+  <h2>Messages — Job / Advertising inquiries</h2>
+  <div class="card">
+    <p class="muted">Sent from the About page. Each shows the sender's Telegram @username.
+      Configure where new inquiries are forwarded under <b>Settings → Contact</b>.</p>
+    <div id="messagesBox"><p class="muted">loading…</p></div>
+    <button id="messagesSeen" class="ghost">Mark all as read</button>
+  </div>
+  </section><!-- /messages -->
+
+  <!-- ══ SETTINGS TAB ══ -->
+  <section class="tab-panel" data-tab="settings">
+
+  <!-- SOCIAL LINKS -->
+  <h2>Social links</h2>
+  <div class="card">
+    <form id="addSocialForm">
+      <div class="row">
+        <div><label>Icon (Tabler name)</label>
+          <input type="text" name="platform" placeholder="brand-instagram" /></div>
+        <div><label>Label</label><input type="text" name="label" placeholder="Instagram" /></div>
+      </div>
+      <label>URL</label>
+      <input type="text" name="url" placeholder="https://instagram.com/..." />
+      <div class="check">
+        <input type="checkbox" id="social_in_header" name="in_header" value="1" />
+        <label for="social_in_header">Show this icon in the top header (next to search)</label>
+      </div>
+      <button type="submit">Add link</button>
+      <span class="muted">Icon names: see tabler.io/icons — e.g. brand-tiktok, brand-instagram, brand-youtube, brand-x, mail.</span>
+    </form>
+    <div id="socialList" style="margin-top:12px"></div>
+  </div>
+
+  <!-- LOGO -->
+  <h2>Logo</h2>
+  <div class="card">
+    <p class="muted">The top header shows the <b>logo text</b>. The <b>logo image</b> is shown
+      full-width on the <b>About page</b> (not in the header).</p>
+    <form id="logoForm">
+      <label>Logo text (top header)</label>
+      <input type="text" name="logo_text" id="logo_text" />
+      <label>Logo image — shown full-width on the About page</label>
+      <input type="file" name="logo_image" accept="image/*" />
+      <div class="check">
+        <input type="checkbox" id="clear_logo_image" name="clear_logo_image" value="1" />
+        <label for="clear_logo_image">Remove current logo image</label>
+      </div>
+      <button type="submit">Save logo</button>
+    </form>
+  </div>
+
+  <!-- TELEGRAM / SHARING -->
+  <h2>Telegram / sharing link</h2>
+  <div class="card">
+    <p class="muted">Used by the Forward / Copy-link / Share buttons so they hand out your
+      Telegram mini-app address (t.me/…) instead of the raw https tunnel URL.</p>
+    <form id="telegramForm">
+      <div class="row">
+        <div><label>Bot @username (no @)</label>
+          <input type="text" name="bot_username" id="bot_username" placeholder="geroinzo_bot" /></div>
+        <div><label>Mini app short name</label>
+          <input type="text" name="miniapp_name" id="miniapp_name" placeholder="gallery" /></div>
+      </div>
+      <span class="muted">Link becomes <b>t.me/&lt;bot&gt;/&lt;short name&gt;</b>. Leave the short name blank to use t.me/&lt;bot&gt;?startapp.</span>
+      <br><button type="submit">Save link</button>
+    </form>
+  </div>
+
+  <!-- CONTACT -->
+  <h2>Contact — where inquiries go</h2>
+  <div class="card">
+    <p class="muted">When someone sends a Job / Advertising message from the About page, the bot
+      forwards it (with their @username) to this Telegram chat. A copy is always kept in the
+      <b>Messages</b> tab even if this is blank.</p>
+    <form id="contactForm">
+      <label>Telegram chat id (your own)</label>
+      <input type="text" name="contact_chat_id" id="contact_chat_id" placeholder="e.g. 123456789" />
+      <span class="muted">Tip: message <b>@userinfobot</b> on Telegram to get your numeric chat id.
+        You must have started your bot once so it can DM you.</span>
+      <br><button type="submit">Save contact</button>
+    </form>
+  </div>
+
+  <!-- ABOUT TEXT -->
+  <h2>About text</h2>
+  <div class="card">
+    <form id="aboutForm">
+      <label>Shown in the About tab</label>
+      <textarea name="about_text" id="about_text"></textarea>
+      <button type="submit">Save about</button>
+    </form>
+  </div>
+
+  <!-- SPLASH -->
+  <h2>Intro / loading screen</h2>
+  <div class="card">
+    <form id="splashForm">
+      <p class="muted">A self-made video (muted, any length). It plays once on open, then reveals the gallery.</p>
+      <div class="check">
+        <input type="checkbox" id="splash_enabled" name="splash_enabled" value="1" />
+        <label for="splash_enabled">Use loading screen</label>
+      </div>
+      <label>Intro video</label>
+      <input type="file" name="splash_video" accept="video/*" />
+      <div class="check">
+        <input type="checkbox" id="clear_splash" name="clear_splash" value="1" />
+        <label for="clear_splash">Remove current intro video</label>
+      </div>
+      <span class="muted" id="splashCurrent"></span>
+      <br><button type="submit">Save intro</button>
+    </form>
+  </div>
+
+  </section><!-- /settings -->
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const toast = (msg) => {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 1800);
+    };
+    const onApiError = (res) => res.status === 401 && location.reload();
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const sel = (a, b) => a === b ? 'selected' : '';
+
+    document.getElementById('logout').addEventListener('click', async e => {
+      e.preventDefault();
+      await fetch('/admin/logout', { method: 'POST' });
+      location.reload();
+    });
+
+    /* ── Media ── */
+    async function loadMediaList() {
+      const res = await fetch('/api/admin/media');
+      if (!res.ok) return onApiError(res);
+      const list = await res.json();
+      const box = document.getElementById('mediaList');
+      box.innerHTML = list.length ? '' : '<p class="muted">No media yet.</p>';
+      list.forEach(m => {
+        const src = '/static/media/' + m.filename;
+        const entry = document.createElement('div');
+        entry.className = 'media-entry'; entry.dataset.id = m.id;
+        const thumb = m.type === 'video'
+          ? `<video class="thumb" src="${src}" muted></video>`
+          : `<img class="thumb" src="${src}" alt="">`;
+        entry.innerHTML =
+          `<div class="item">
+             <span class="handle">⋮⋮</span>${thumb}
+             <div class="meta">
+               <b>${esc(m.title) || '(untitled)'}</b>
+               <small>${m.type} · ${m.size} · ${m.likes} likes
+                 ${m.is_locked ? `<span class="tag lock">lock ${m.min_stars}★</span>` : ''}</small>
+             </div>
+             <button class="ghost" data-edit="${m.id}">Edit</button>
+             <button class="danger" data-del="${m.id}">Delete</button>
+           </div>
+           <form class="editbox" data-editform="${m.id}" hidden>
+             <div class="row">
+               <div><label>Title</label><input type="text" name="title" value="${esc(m.title)}"></div>
+               <div><label>Type</label>
+                 <select name="type">
+                   <option value="photo" ${sel(m.type,'photo')}>Photo</option>
+                   <option value="video" ${sel(m.type,'video')}>Video</option>
+                 </select>
+               </div>
+             </div>
+             <label>Description</label>
+             <textarea name="description">${esc(m.description)}</textarea>
+             <div class="row">
+               <div><label>Date label</label><input type="text" name="date_label" value="${esc(m.date_label)}"></div>
+               <div><label>Year</label><input type="text" name="year" value="${esc(m.year)}"></div>
+               <div><label>Wall size</label>
+                 <select name="size">
+                   <option value="medium" ${sel(m.size,'medium')}>Medium</option>
+                   <option value="tall" ${sel(m.size,'tall')}>Tall</option>
+                   <option value="short" ${sel(m.size,'short')}>Short</option>
+                 </select>
+               </div>
+             </div>
+             <div class="row">
+               <div class="check">
+                 <input type="checkbox" name="is_locked" value="1" ${m.is_locked ? 'checked' : ''}>
+                 <label>Lock — viewers pay Stars to see it</label>
+               </div>
+               <div><label>Min stars</label>
+                 <input type="number" name="min_stars" min="1" value="${m.min_stars}"></div>
+             </div>
+             <label>Categories (choose up to 3)</label>
+             <div class="cats-pick${CATEGORIES.length ? '' : ' empty'}">${catChecks((m.category_ids || '').split(','))}</div>
+             <input type="hidden" name="category_ids_present" value="1">
+             <label>Replace file (optional)</label>
+             <input type="file" name="file" accept="image/*,video/*">
+             <div>
+               <button type="submit">Save changes</button>
+               <button type="button" class="ghost" data-canceledit="${m.id}">Cancel</button>
+             </div>
+           </form>`;
+        box.appendChild(entry);
+      });
+      enableDrag(box);
+    }
+
+    const mediaListEl = document.getElementById('mediaList');
+
+    mediaListEl.addEventListener('click', async e => {
+      const editId = e.target.dataset.edit;
+      const cancelId = e.target.dataset.canceledit;
+      const delId = e.target.dataset.del;
+
+      if (editId) {
+        const form = mediaListEl.querySelector(`form[data-editform="${editId}"]`);
+        if (form) form.hidden = !form.hidden;
+        return;
+      }
+      if (cancelId) {
+        const form = mediaListEl.querySelector(`form[data-editform="${cancelId}"]`);
+        if (form) form.hidden = true;
+        return;
+      }
+      if (delId) {
+        if (!confirm('Delete this media item?')) return;
+        const res = await fetch('/api/admin/media/' + delId, { method: 'DELETE' });
+        if (!res.ok) return onApiError(res);
+        toast('Deleted'); loadMediaList();
+      }
+    });
+
+    /* Edit — save changes via PATCH (existing backend endpoint). */
+    mediaListEl.addEventListener('submit', async e => {
+      const form = e.target.closest('form[data-editform]');
+      if (!form) return;
+      e.preventDefault();
+      const id = form.dataset.editform;
+      const fd = new FormData(form);
+      // Unchecked checkbox sends nothing — make the "off" state explicit.
+      if (!form.querySelector('[name=is_locked]').checked) fd.set('is_locked', '0');
+      // Drop the empty file part so we don't trigger a bogus "replace".
+      const file = fd.get('file');
+      if (!file || !file.name) fd.delete('file');
+      const res = await fetch('/api/admin/media/' + id, { method: 'PATCH', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { onApiError(res); return toast(data.error || 'Save failed'); }
+      toast('Saved'); loadMediaList();
+    });
+
+    document.getElementById('addMediaForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const res = await fetch('/api/admin/media', { method: 'POST', body: new FormData(e.target) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { onApiError(res); return toast(data.error || 'Upload failed'); }
+      e.target.reset(); toast('Added'); loadMediaList();
+    });
+
+    /* Drag to reorder. The whole row is draggable (reliable), but a drag that
+       starts inside the open edit form is cancelled so fields stay usable. */
+    function enableDrag(box) {
+      let dragEl = null;
+      box.querySelectorAll('.media-entry').forEach(entry => {
+        entry.draggable = true;
+        entry.addEventListener('dragstart', e => {
+          if (e.target.closest('.editbox')) { e.preventDefault(); return; }
+          dragEl = entry; entry.classList.add('dragging');
+        });
+        entry.addEventListener('dragend', async () => {
+          if (!dragEl) return;
+          entry.classList.remove('dragging');
+          dragEl = null;
+          const order = [...box.querySelectorAll('.media-entry')].map(i => Number(i.dataset.id));
+          const res = await fetch('/api/admin/media/reorder', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order }),
+          });
+          toast(res.ok ? 'Order saved' : 'Save failed');
+        });
+        entry.addEventListener('dragover', e => {
+          if (!dragEl) return;
+          e.preventDefault();
+          const after = [...box.querySelectorAll('.media-entry:not(.dragging)')].find(el => {
+            const r = el.getBoundingClientRect();
+            return e.clientY < r.top + r.height / 2;
+          });
+          if (after) box.insertBefore(dragEl, after); else box.appendChild(dragEl);
+        });
+      });
+    }
+
+    /* ── Social ── */
+    async function loadSocial() {
+      const res = await fetch('/api/admin/social');
+      if (!res.ok) return onApiError(res);
+      const list = await res.json();
+      const box = document.getElementById('socialList');
+      box.innerHTML = list.length ? '' : '<p class="muted">No links yet.</p>';
+      list.forEach(s => {
+        const entry = document.createElement('div');
+        entry.className = 'media-entry';
+        entry.innerHTML =
+          `<div class="item">
+             <i class="ti ti-${(s.platform||'link').replace(/^ti-/,'')}" style="font-size:20px;color:#39e8a0"></i>
+             <div class="meta"><b>${esc(s.label || s.platform)} ${s.in_header ? '<span class="tag">header</span>' : ''}</b><small>${esc(s.url)}</small></div>
+             <button class="ghost" data-editsocial="${s.id}">Edit</button>
+             <button class="danger" data-delsocial="${s.id}">Remove</button>
+           </div>
+           <form class="editbox" data-socialform="${s.id}" hidden>
+             <div class="row">
+               <div><label>Icon (Tabler name)</label><input type="text" name="platform" value="${esc(s.platform)}"></div>
+               <div><label>Label</label><input type="text" name="label" value="${esc(s.label)}"></div>
+             </div>
+             <label>URL</label>
+             <input type="text" name="url" value="${esc(s.url)}">
+             <div class="check">
+               <input type="checkbox" name="in_header" value="1" ${s.in_header ? 'checked' : ''}>
+               <label>Show this icon in the top header</label>
+             </div>
+             <input type="hidden" name="in_header_present" value="1">
+             <div>
+               <button type="submit">Save</button>
+               <button type="button" class="ghost" data-cancelsocial="${s.id}">Cancel</button>
+             </div>
+           </form>`;
+        box.appendChild(entry);
+      });
+    }
+
+    const socialBox = document.getElementById('socialList');
+    socialBox.addEventListener('click', async e => {
+      const editId = e.target.dataset.editsocial;
+      const cancelId = e.target.dataset.cancelsocial;
+      const delId = e.target.dataset.delsocial;
+      if (editId) {
+        const f = socialBox.querySelector(`form[data-socialform="${editId}"]`);
+        if (f) f.hidden = !f.hidden;
+        return;
+      }
+      if (cancelId) {
+        const f = socialBox.querySelector(`form[data-socialform="${cancelId}"]`);
+        if (f) f.hidden = true;
+        return;
+      }
+      if (delId) {
+        const res = await fetch('/api/admin/social/' + delId, { method: 'DELETE' });
+        if (!res.ok) return onApiError(res);
+        toast('Removed'); loadSocial();
+      }
+    });
+
+    socialBox.addEventListener('submit', async e => {
+      const form = e.target.closest('form[data-socialform]');
+      if (!form) return;
+      e.preventDefault();
+      const id = form.dataset.socialform;
+      const res = await fetch('/api/admin/social/' + id, { method: 'PATCH', body: new FormData(form) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { onApiError(res); return toast(data.error || 'Save failed'); }
+      toast('Saved'); loadSocial();
+    });
+    document.getElementById('addSocialForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const res = await fetch('/api/admin/social', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(f)),
+      });
+      if (!res.ok) return onApiError(res);
+      e.target.reset(); toast('Link added'); loadSocial();
+    });
+
+    /* ── Settings (logo / about / splash) ── */
+    async function loadSettings() {
+      const res = await fetch('/api/admin/settings');
+      if (!res.ok) return onApiError(res);
+      const s = await res.json();
+      document.getElementById('logo_text').value = s.logo_text || '';
+      document.getElementById('about_text').value = s.about_text || '';
+      document.getElementById('bot_username').value = s.bot_username || '';
+      document.getElementById('miniapp_name').value = s.miniapp_name || '';
+      document.getElementById('contact_chat_id').value = s.contact_chat_id || '';
+      document.getElementById('splash_enabled').checked = s.splash_enabled === '1';
+      document.getElementById('splashCurrent').textContent =
+        s.splash_filename ? 'Current: ' + s.splash_filename : 'No intro video set.';
+    }
+    function settingsSubmit(formId) {
+      document.getElementById(formId).addEventListener('submit', async e => {
+        e.preventDefault();
+        const res = await fetch('/api/admin/settings', { method: 'POST', body: new FormData(e.target) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { onApiError(res); return toast(data.error || 'Save failed'); }
+        toast('Saved'); loadSettings();
+      });
+    }
+    settingsSubmit('logoForm');
+    settingsSubmit('aboutForm');
+    settingsSubmit('telegramForm');
+    settingsSubmit('splashForm');
+    settingsSubmit('contactForm');
+
+    /* ── Categories ── */
+    let CATEGORIES = [];
+
+    function catChecks(selected) {
+      const sel = (selected || []).map(String).filter(Boolean);
+      return CATEGORIES.map(c =>
+        `<label><input type="checkbox" name="category_ids" value="${c.id}"` +
+        `${sel.includes(String(c.id)) ? ' checked' : ''}> ${esc(c.name)}</label>`
+      ).join('');
+    }
+
+    async function loadCategories() {
+      const res = await fetch('/api/admin/categories');
+      if (!res.ok) return onApiError(res);
+      CATEGORIES = await res.json();
+
+      // Picker on the Add-media form.
+      const add = document.getElementById('addCats');
+      add.innerHTML = catChecks([]);
+      add.classList.toggle('empty', CATEGORIES.length === 0);
+
+      // Picker on the Add-post form.
+      const padd = document.getElementById('postAddCats');
+      if (padd) { padd.innerHTML = catChecks([]); padd.classList.toggle('empty', CATEGORIES.length === 0); }
+
+      // Management list.
+      const box = document.getElementById('categoryList');
+      box.innerHTML = CATEGORIES.length ? '' : '<p class="muted">No categories yet.</p>';
+      CATEGORIES.forEach(c => {
+        const el = document.createElement('div');
+        el.className = 'item';
+        el.innerHTML =
+          `<div class="meta"><b>${esc(c.name)}</b></div>
+           <button class="danger" data-delcat="${c.id}">Remove</button>`;
+        box.appendChild(el);
+      });
+    }
+
+    document.getElementById('addCategoryForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const res = await fetch('/api/admin/categories', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: f.get('name') }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { onApiError(res); return toast(data.error || 'Failed'); }
+      e.target.reset(); toast('Category added');
+      await loadCategories(); loadMediaList();
+    });
+
+    document.getElementById('categoryList').addEventListener('click', async e => {
+      const id = e.target.dataset.delcat;
+      if (!id) return;
+      if (!confirm('Remove this category? It will be cleared from all posts.')) return;
+      const res = await fetch('/api/admin/categories/' + id, { method: 'DELETE' });
+      if (!res.ok) return onApiError(res);
+      toast('Removed');
+      await loadCategories(); loadMediaList();
+    });
+
+    /* Enforce "up to 3" on any category picker (add + edit). */
+    document.addEventListener('change', e => {
+      if (e.target.name !== 'category_ids') return;
+      const group = e.target.closest('.cats-pick');
+      if (!group) return;
+      if (group.querySelectorAll('input[name=category_ids]:checked').length > 3) {
+        e.target.checked = false;
+        toast('Max 3 categories');
+      }
+    });
+
+    /* ── Posts: rich text editor + hashtags + media ── */
+    const EMOJIS = ['😀','😂','🔥','✨','❤️','👍','🎨','📷','🎬','💯','🙌','😍','🥹','🤝','🚀','⭐','🌿','👀'];
+
+    function rteHTML(initial) {
+      const emo = EMOJIS.map(e => `<button type="button" data-emoji="${e}">${e}</button>`).join('');
+      return `<div class="rte">
+        <div class="rte-toolbar">
+          <button type="button" data-cmd="bold"><b>B</b></button>
+          <button type="button" data-cmd="italic"><i>I</i></button>
+          <button type="button" data-cmd="underline"><u>U</u></button>
+          <button type="button" data-cmd="insertUnorderedList">• List</button>
+          <button type="button" data-cmd="insertOrderedList">1. List</button>
+          <label class="rte-color">Color<input type="color" data-cmd="foreColor" value="#39e8a0"></label>
+          <span class="rte-emojis">${emo}</span>
+        </div>
+        <div class="rte-editor" contenteditable="true" data-rte>${initial || ''}</div>
+      </div>
+      <input type="hidden" name="body">`;
+    }
+
+    function hashtagAreaHTML(json) {
+      const safe = (json || '[]').replace(/"/g, '&quot;');
+      return `<label>Hashtags (text + color)</label>
+        <div class="hashtag-build">
+          <input type="text" class="ht-input" placeholder="trending">
+          <input type="color" class="ht-color" value="#39e8a0">
+          <button type="button" class="ht-add">Add tag</button>
+        </div>
+        <div class="hashtag-list" data-hashtags></div>
+        <input type="hidden" name="hashtags" value="${safe}">`;
+    }
+
+    function renderHashtags(form) {
+      const hidden = form.querySelector('input[name=hashtags]');
+      const list = form.querySelector('[data-hashtags]');
+      if (!hidden || !list) return;
+      let tags = [];
+      try { tags = JSON.parse(hidden.value || '[]'); } catch (e) {}
+      list.innerHTML = tags.map((t, i) =>
+        `<span class="ht-chip" style="--htc:${esc(t.color || '#888')}">#${esc(t.text)}` +
+        `<button type="button" class="ht-del" data-i="${i}">×</button></span>`).join('');
+    }
+    function syncEditor(form) {
+      const ed = form.querySelector('[data-rte]');
+      const hidden = form.querySelector('input[name=body]');
+      if (ed && hidden) hidden.value = ed.innerHTML;
+    }
+
+    /* Toolbar (mousedown keeps the editor selection); emoji + color inserts. */
+    document.addEventListener('mousedown', e => {
+      const b = e.target.closest('.rte-toolbar [data-cmd], .rte-toolbar [data-emoji]');
+      if (!b || b.tagName === 'INPUT') return;
+      e.preventDefault();
+      const ed = b.closest('.rte').querySelector('[data-rte]');
+      ed.focus();
+      if (b.dataset.emoji) document.execCommand('insertText', false, b.dataset.emoji);
+      else document.execCommand(b.dataset.cmd, false, null);
+    });
+    document.addEventListener('input', e => {
+      if (e.target.matches('input[type=color][data-cmd=foreColor]')) {
+        const ed = e.target.closest('.rte').querySelector('[data-rte]');
+        ed.focus();
+        document.execCommand('foreColor', false, e.target.value);
+      }
+    });
+    /* Hashtag add / remove (delegated). */
+    document.addEventListener('click', e => {
+      if (e.target.classList.contains('ht-add')) {
+        const form = e.target.closest('form');
+        const ti = form.querySelector('.ht-input'), ci = form.querySelector('.ht-color');
+        const text = ti.value.trim().replace(/^#/, '');
+        if (!text) return;
+        const hidden = form.querySelector('input[name=hashtags]');
+        let tags = []; try { tags = JSON.parse(hidden.value || '[]'); } catch (er) {}
+        tags.push({ text, color: ci.value });
+        hidden.value = JSON.stringify(tags); ti.value = '';
+        renderHashtags(form);
+      }
+      if (e.target.classList.contains('ht-del')) {
+        const form = e.target.closest('form');
+        const hidden = form.querySelector('input[name=hashtags]');
+        let tags = []; try { tags = JSON.parse(hidden.value || '[]'); } catch (er) {}
+        tags.splice(Number(e.target.dataset.i), 1);
+        hidden.value = JSON.stringify(tags); renderHashtags(form);
+      }
+    });
+
+    /* Mount the editor + hashtag builder on the Add-post form. */
+    document.getElementById('addBodyMount').innerHTML = rteHTML('');
+    document.getElementById('addHashMount').innerHTML = hashtagAreaHTML('[]');
+
+    async function loadPosts() {
+      const res = await fetch('/api/admin/posts');
+      if (!res.ok) return onApiError(res);
+      const list = await res.json();
+      const box = document.getElementById('postList');
+      box.innerHTML = list.length ? '' : '<p class="muted">No posts yet.</p>';
+      list.forEach(p => {
+        const cats = (p.category_ids || '').split(',').filter(Boolean);
+        const entry = document.createElement('div');
+        entry.className = 'media-entry';
+        entry.innerHTML =
+          `<div class="item">
+             <div class="meta"><b>${esc(p.title) || '(untitled)'}</b><small>post · ${p.likes || 0} likes</small></div>
+             <button class="ghost" data-editpost="${p.id}">Edit</button>
+             <button class="danger" data-delpost="${p.id}">Delete</button>
+           </div>
+           <form class="editbox" data-postform="${p.id}" hidden enctype="multipart/form-data">
+             <label>Title</label>
+             <input type="text" name="title" value="${esc(p.title)}">
+             <label>Body</label>
+             ${rteHTML(p.body || '')}
+             <label>Categories</label>
+             <div class="cats-pick${CATEGORIES.length ? '' : ' empty'}">${catChecks(cats)}</div>
+             <input type="hidden" name="category_ids_present" value="1">
+             ${hashtagAreaHTML(p.hashtags || '[]')}
+             <label>Stars amount (support)</label>
+             <input type="number" name="min_stars" value="${p.min_stars || 1}" min="1" style="max-width:140px">
+             <label>Current media (× to delete)</label>
+             <div class="post-media-manage" data-postmedia="${p.id}"><span class="muted">loading…</span></div>
+             <label>Add more media</label>
+             <input type="file" name="media" accept="image/*,video/*" multiple>
+             <div>
+               <button type="submit">Save</button>
+               <button type="button" class="ghost" data-cancelpost="${p.id}">Cancel</button>
+             </div>
+           </form>`;
+        box.appendChild(entry);
+        renderHashtags(entry.querySelector('form'));
+      });
+    }
+
+    async function loadPostMedia(postId) {
+      const box = document.querySelector(`[data-postmedia="${postId}"]`);
+      if (!box) return;
+      const res = await fetch('/api/admin/posts/' + postId + '/media');
+      if (!res.ok) return;
+      const media = await res.json();
+      box.innerHTML = media.length ? '' : '<span class="muted">No media yet.</span>';
+      media.forEach(m => {
+        const src = '/static/media/' + m.filename;
+        const el = document.createElement('div');
+        el.className = 'pm-item';
+        el.innerHTML = (m.type === 'video' ? `<video src="${src}" muted></video>` : `<img src="${src}">`) +
+          (m.type === 'video' ? '<span class="pm-badge">video</span>' : '') +
+          `<button type="button" class="pm-del" data-delmedia="${m.id}" data-post="${postId}">×</button>`;
+        box.appendChild(el);
+      });
+    }
+
+    document.getElementById('addPostForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      syncEditor(e.target);
+      const res = await fetch('/api/admin/posts', { method: 'POST', body: new FormData(e.target) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { onApiError(res); return toast(data.error || 'Failed'); }
+      e.target.reset();
+      e.target.querySelector('[data-rte]').innerHTML = '';
+      e.target.querySelector('input[name=hashtags]').value = '[]';
+      renderHashtags(e.target);
+      toast('Post created'); loadPosts();
+    });
+
+    const postBox = document.getElementById('postList');
+    postBox.addEventListener('click', async e => {
+      const ed = e.target.dataset.editpost, ca = e.target.dataset.cancelpost,
+            de = e.target.dataset.delpost, dm = e.target.dataset.delmedia;
+      if (ed) {
+        const f = postBox.querySelector(`form[data-postform="${ed}"]`);
+        if (f) { f.hidden = !f.hidden; if (!f.hidden) loadPostMedia(ed); }
+        return;
+      }
+      if (ca) { const f = postBox.querySelector(`form[data-postform="${ca}"]`); if (f) f.hidden = true; return; }
+      if (de) {
+        if (!confirm('Delete this post and its media?')) return;
+        const res = await fetch('/api/admin/posts/' + de, { method: 'DELETE' });
+        if (!res.ok) return onApiError(res);
+        toast('Deleted'); loadPosts();
+      }
+      if (dm) {
+        const res = await fetch('/api/admin/media/' + dm, { method: 'DELETE' });
+        if (!res.ok) return onApiError(res);
+        toast('Media removed'); loadPostMedia(e.target.dataset.post);
+      }
+    });
+    postBox.addEventListener('submit', async e => {
+      const form = e.target.closest('form[data-postform]');
+      if (!form) return;
+      e.preventDefault();
+      syncEditor(form);
+      const res = await fetch('/api/admin/posts/' + form.dataset.postform, { method: 'PATCH', body: new FormData(form) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { onApiError(res); return toast(data.error || 'Save failed'); }
+      toast('Saved'); loadPosts();
+    });
+
+    /* ── Tabs ── */
+    document.getElementById('tabNav').addEventListener('click', e => {
+      const btn = e.target.closest('.tab-btn');
+      if (!btn) return;
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.tab === tab));
+      if (tab === 'stats') loadStats();
+      if (tab === 'messages') loadMessages();
+      window.scrollTo({ top: 0 });
+    });
+
+    /* ── Stats ── */
+    function setStatsBadge(n) {
+      for (const id of ['statsBadge', 'statsTabBadge']) {
+        const b = document.getElementById(id);
+        if (!b) continue;
+        b.hidden = !n; b.textContent = n + ' new';
+      }
+    }
+    async function loadStats() {
+      const res = await fetch('/api/admin/stats');
+      if (!res.ok) return onApiError(res);
+      const data = await res.json();
+      setStatsBadge(data.changed);
+      const box = document.getElementById('statsBox');
+      const o = data.overall || { visits: 0, uniques: 0, delta: {} };
+      const od = o.delta || {};
+      const big = (v, d, lbl) =>
+        `<div><div class="so-num">${v}${d > 0 ? `<span class="stat-delta">+${d}</span>` : ''}</div>
+           <div class="so-lbl">${lbl}</div></div>`;
+      const cell = (v, d) => `<td class="num">${v}${d > 0 ? `<span class="stat-delta">+${d}</span>` : ''}</td>`;
+      const table = (rows, head) => !rows.length ? '<p class="muted">Nothing yet.</p>' :
+        `<table class="stats-table"><thead><tr><th>${head}</th>
+           <th class="num">Views</th><th class="num">Unique</th>
+           <th class="num">Likes</th><th class="num">Stars</th></tr></thead><tbody>` +
+        rows.map(r =>
+          `<tr class="stats-row ${r.changed ? 'changed' : ''}">
+             <td>${esc(r.label) || '(untitled)'}</td>
+             ${cell(r.views, r.delta.views)}${cell(r.uniques, r.delta.uniques)}
+             ${cell(r.likes, r.delta.likes)}${cell(r.stars, r.delta.stars)}</tr>`).join('') +
+        `</tbody></table>`;
+      box.innerHTML =
+        `<div class="stats-sub">Overall</div>
+         <div class="stats-overall">${big(o.visits, od.visits, 'Visits')}${big(o.uniques, od.uniques, 'Unique visitors')}</div>
+         <div class="stats-sub">Photos</div>${table(data.photos || [], 'Photo')}
+         <div class="stats-sub">Posts</div>${table(data.posts || [], 'Post')}`;
+    }
+    document.getElementById('statsSeen').addEventListener('click', async () => {
+      const res = await fetch('/api/admin/stats/seen', { method: 'POST' });
+      if (!res.ok) return onApiError(res);
+      toast('Marked seen'); loadStats();
+    });
+
+    /* ── Messages ── */
+    function setMsgBadge(n) {
+      const b = document.getElementById('msgTabBadge');
+      b.hidden = !n; b.textContent = n;
+    }
+    async function loadMessages() {
+      const res = await fetch('/api/admin/messages');
+      if (!res.ok) return onApiError(res);
+      const data = await res.json();
+      setMsgBadge(data.unseen);
+      const box = document.getElementById('messagesBox');
+      if (!data.messages.length) { box.innerHTML = '<p class="muted">No messages yet.</p>'; return; }
+      box.innerHTML = data.messages.map(m => {
+        const when = new Date(m.ts * 1000).toLocaleString();
+        const who = m.username ? '@' + esc(m.username)
+          : (m.tg_user_id ? 'id ' + esc(m.tg_user_id) : 'anonymous');
+        return `<div class="msg ${m.seen ? '' : 'unseen'}">
+            <div class="msg-head"><span class="msg-from">${who}</span><span class="msg-time">${when}</span></div>
+            <div class="msg-body">${esc(m.body)}</div>
+            <button class="danger" data-delmsg="${m.id}">Delete</button>
+          </div>`;
+      }).join('');
+    }
+    document.getElementById('messagesBox').addEventListener('click', async e => {
+      const id = e.target.dataset.delmsg;
+      if (!id) return;
+      if (!confirm('Delete this message?')) return;
+      const res = await fetch('/api/admin/messages/' + id, { method: 'DELETE' });
+      if (!res.ok) return onApiError(res);
+      toast('Deleted'); loadMessages();
+    });
+    document.getElementById('messagesSeen').addEventListener('click', async () => {
+      const res = await fetch('/api/admin/messages/seen', { method: 'POST' });
+      if (!res.ok) return onApiError(res);
+      toast('Marked read'); loadMessages();
+    });
+
+    /* Boot */
+    loadCategories().then(loadMediaList);
+    loadSocial();
+    loadSettings();
+    loadPosts();
+    loadStats();
+    loadMessages();
+  </script>
+{% endif %}
+
+</body>
+</html>

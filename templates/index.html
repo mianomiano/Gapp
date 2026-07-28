@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Geroinzo — Gallery</title>
+
+  <!-- Telegram Mini App SDK — required for window.Telegram.WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Fallback web fonts (replaced by custom fonts below when available) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       CUSTOM FONTS
+       Place your .woff2 / .otf / .ttf files in /static/fonts/
+       and uncomment + fill in the src paths below.
+       The CSS variables --font-display and --font-mono reference
+       these throughout the file — change them once here, done.
+    ============================================================ */
+
+    /*
+    @font-face {
+      font-family: 'GeroinzoDisplay';
+      src: url('/static/fonts/YOUR_DISPLAY_FONT.woff2') format('woff2'),
+           url('/static/fonts/YOUR_DISPLAY_FONT.otf') format('opentype');
+      font-weight: 400 700;
+      font-style: normal;
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: 'GeroinzoMono';
+      src: url('/static/fonts/YOUR_MONO_FONT.woff2') format('woff2'),
+           url('/static/fonts/YOUR_MONO_FONT.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: 'GeroinzoStamp';
+      src: url('/static/fonts/YOUR_STAMP_FONT.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: block;
+    }
+    */
+
+    /* ============================================================
+       DESIGN TOKENS
+       Single source of truth for every color, size, and spacing.
+       Edit here — nothing else needs touching.
+    ============================================================ */
+
+    :root {
+      /* Surfaces — near-black stack, lightest = deepest card */
+      --bg-page:      #0A0A0A;   /* page background */
+      --bg-base:      #111114;   /* default card / cell surface */
+      --bg-raised:    #171719;   /* raised elements */
+      --bg-elevated:  #1E1E22;   /* topmost surfaces */
+      --bg-grain:     #252528;   /* subtle texture fallback */
+
+      /* Borders */
+      --border-raw:   #2E2E32;   /* default 1px border */
+      --border-hot:   #4A4A52;   /* highlighted / active border */
+
+      /* Text */
+      --text-primary:  #E8E4DC;  /* headlines, values */
+      --text-secondary:#7A7672;  /* labels, metadata */
+      --text-faint:    #35332F;  /* ghost / watermark text */
+
+      /* Accent — CRT green (video, donate, active indicator) */
+      --green:         #39E8A0;
+      --green-dim:     #1A6644;
+      --green-bg:      rgba(57, 232, 160, 0.05);
+
+      /* Accent — distress red (likes, "new" badge) */
+      --red:           #FF2A2A;
+
+      /* Typography */
+      /* Fallbacks include Cyrillic-capable system fonts so Russian text renders
+         cleanly even before a custom font is dropped in (Space Grotesk / Share
+         Tech Mono have no Cyrillic, so those glyphs fall through to these). */
+      --font-display:  'Space Grotesk', system-ui, 'Segoe UI', Roboto, Arial, sans-serif;  /* swap to GeroinzoDisplay */
+      --font-mono:     'Share Tech Mono', ui-monospace, 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace;  /* swap to GeroinzoMono  */
+      --font-stamp:    'Share Tech Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;  /* swap to GeroinzoStamp */
+
+      /* Scanline overlay — applied via pseudo-element on image cells */
+      --scanline: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0, 0, 0, 0.18) 3px,
+        rgba(0, 0, 0, 0.18) 4px
+      );
+
+      /* Layout */
+      --wall-gap:   3px;
+      --cell-radius: 0;           /* grunge = no rounding anywhere */
+      --nav-height: 52px;
+    }
+
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overscroll-behavior: none;       /* prevent pull-to-refresh in Telegram */
+    }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      /* Responsive: fill the available width (phone, desktop, TG fullscreen).
+         The .app shell below centers + caps the content on wide screens. */
+      width: 100%;
+    }
+
+    /* Utility: screen-reader only */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap;
+    }
+
+    /* ============================================================
+       TYPOGRAPHY UTILITIES
+    ============================================================ */
+
+    .mono {
+      font-family: var(--font-mono);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .stamp-text {
+      font-family: var(--font-stamp);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    /* Inline stamp / badge — square border, no radius */
+    .stamp {
+      display: inline-block;
+      font-family: var(--font-stamp);
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid currentColor;
+      padding: 2px 6px;
+      border-radius: 0;
+      line-height: 1.4;
+    }
+    .stamp-green { color: var(--green);        border-color: var(--green);      }
+    .stamp-white { color: var(--text-secondary);border-color: var(--border-hot); }
+    .stamp-red   { color: var(--red);           border-color: var(--red);        }
+
+    /* Ghost watermark type — huge, very low opacity, decorative */
+    .ghost-type {
+      font-family: var(--font-display);
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      text-transform: uppercase;
+      line-height: 0.9;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* ============================================================
+       SCANLINE OVERLAY — add class .scan to any image cell
+    ============================================================ */
+
+    .scan { position: relative; }
+    .scan::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--scanline);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* ============================================================
+       CORNER CROSSHAIR MARKS
+       Add four .corner-mark spans inside any cell for the
+       registration-mark / photocopy aesthetic.
+    ============================================================ */
+
+    .corner-mark {
+      position: absolute;
+      width: 10px; height: 10px;
+      z-index: 3;
+    }
+    .corner-mark::before,
+    .corner-mark::after {
+      content: '';
+      position: absolute;
+      background: var(--text-faint);
+    }
+    .corner-mark::before { width: 1px; height: 10px; }
+    .corner-mark::after  { width: 10px; height: 1px; }
+    .cm-tl { top: 5px;    left: 5px;  }
+    .cm-tr { top: 5px;    right: 5px; transform: scaleX(-1); }
+    .cm-br { bottom: 5px; right: 5px; transform: scale(-1);  }
+    .cm-bl { bottom: 5px; left: 5px;  transform: scaleY(-1); }
+
+    /* ============================================================
+       LAYOUT SHELL
+    ============================================================ */
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+      width: 100%;
+      max-width: 1600px;   /* cap + center on very wide screens */
+      margin: 0 auto;
+    }
+
+    /* Main scroll area — leaves room for fixed bottom nav */
+    .scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: calc(var(--nav-height) + 44px);   /* clear floating nav */
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ============================================================
+       TOP BAR
+    ============================================================ */
+
+    .topbar {
+      padding: 14px 14px 10px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-raw);
+      background: var(--bg-base);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .topbar-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+
+    .topbar-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .topbar-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .topbar-icons {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .topbar-icons i { font-size: 18px; color: var(--text-secondary); }
+
+    .topbar-count {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-faint);
+      letter-spacing: 0.1em;
+    }
+
+    /* ============================================================
+       FILTER CHIPS ROW
+    ============================================================ */
+
+    .filter-row {
+      padding: 8px 14px 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border-raw);
+    }
+
+    /* ============================================================
+       IMAGE WALL
+       CSS Grid — 2 equal columns, gap = --wall-gap.
+       Cells can span rows via .cell-tall (span 2).
+       Heights are set directly on each cell via inline style
+       or utility classes — intentionally irregular.
+    ============================================================ */
+
+    /* Masonry on a real CSS grid: cells flow row-by-row from the TOP-LEFT in
+       reading order (so the newest item reads first), each keeps its natural
+       aspect ratio, fills its column width, and portrait images show in full
+       (no cropping). JS sets every cell's row span from its media ratio
+       (see relayoutCell) — the grid-auto-rows track is the unit it counts. */
+    .wall {
+      padding: var(--wall-gap);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: 8px;
+      gap: var(--wall-gap);
+      align-items: start;
+    }
+
+    .cell {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-raw);
+      border-radius: var(--cell-radius);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      display: block;
+      width: 100%;
+      grid-row-end: span 20;   /* provisional; JS recomputes once media loads */
+    }
+
+    /* Real media keeps its own proportions and fits the column width. */
+    .cell > img,
+    .cell > video {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    /* Placeholder cells (locked / missing media) need a height of their own. */
+    .cell.is-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 140px;
+    }
+
+    /* Cell label strip — sits at the bottom of each cell */
+    .cell-label {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 4px 7px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(10, 10, 10, 0.85);
+      border-top: 1px solid var(--border-raw);
+      z-index: 4;
+    }
+    .cell-label-text {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    /* Play badge — top-right of video cells */
+    .play-badge {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 24px; height: 24px;
+      border: 1px solid var(--text-secondary);
+      background: rgba(10, 10, 10, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 4;
+    }
+    .play-badge i { font-size: 11px; color: var(--text-secondary); }
+
+    /* Ghost type inside cells */
+    .cell-ghost {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Cell icon (placeholder when no real image loaded) */
+    .cell-icon {
+      position: relative;
+      z-index: 1;
+      font-size: 32px;
+      color: var(--text-faint);
+      opacity: 0.6;
+    }
+
+    /* ============================================================
+       SECTION DIVIDER — raw horizontal rule with label
+    ============================================================ */
+
+    .raw-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-top: 1px solid var(--border-raw);
+      border-bottom: 1px solid var(--border-raw);
+      margin: var(--wall-gap) 0;
+    }
+    .raw-divider-line {
+      flex: 1; height: 1px;
+      background: var(--border-raw);
+    }
+    .raw-divider-text {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+
+    /* ============================================================
+       EXPANDED CARD
+       Shown when user taps a wall cell.
+       Toggle .is-hidden to show/hide via JS.
+    ============================================================ */
+
+    .expanded-card {
+      margin: var(--wall-gap);
+      border: 1px solid var(--border-hot);
+      background: var(--bg-raised);
+    }
+
+    /* Image area */
+    .exp-image {
+      height: 220px;
+      background: var(--bg-page);
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border-raw);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Background ghost type in image area */
+    .exp-image-ghost {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Actual <img> or <video> tag goes here — set object-fit: cover */
+    .exp-image img,
+    .exp-image video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Scanline always on top of media */
+    .exp-image::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--scanline);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    /* Top-right action buttons on expanded image */
+    .exp-image-actions {
+      position: absolute;
+      top: 10px; right: 10px;
+      display: flex;
+      gap: 8px;
+      z-index: 4;
+    }
+
+    /* Date stamp on image */
+    .exp-date {
+      position: absolute;
+      bottom: 10px; left: 10px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      z-index: 4;
+    }
+
+    /* Icon button — used in image overlay and elsewhere */
+    .icon-btn {
+      width: 30px; height: 30px;
+      border: 1px solid var(--border-hot);
+      background: rgba(10, 10, 10, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .icon-btn i { font-size: 14px; color: var(--text-secondary); }
+    .icon-btn:active { background: var(--bg-elevated); }
+
+    /* Expanded body */
+    .exp-body {
+      padding: 13px 14px 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .exp-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .exp-title {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      line-height: 1.15;
+    }
+
+    .exp-meta {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-faint);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      line-height: 1.7;
+    }
+
+    /* Action row — like + stars + expand */
+    .exp-actions {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-raw);
+    }
+
+    /* Like button */
+    .like-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--border-hot);
+      padding: 8px 14px;
+      background: transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.1s;
+    }
+    .like-btn i { font-size: 16px; color: var(--red); }
+    .like-btn span {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-secondary);
+      letter-spacing: 0.06em;
+    }
+    .like-btn.liked { border-color: var(--red); }
+    .like-btn:active { background: rgba(255, 42, 42, 0.06); }
+
+    /* Donate stars button — Telegram Stars payment trigger */
+    .star-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid var(--green-dim);
+      padding: 8px 14px;
+      background: var(--green-bg);
+      cursor: pointer;
+      transition: border-color 0.1s, background 0.1s;
+    }
+    .star-btn i { font-size: 16px; color: var(--green); }
+    .star-btn span {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .star-btn:active {
+      border-color: var(--green);
+      background: rgba(57, 232, 160, 0.1);
+    }
+
+    /* Expand-to-fullscreen hint */
+    .expand-hint {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 0;
+    }
+    .expand-hint i { font-size: 11px; color: var(--text-faint); flex-shrink: 0; }
+    .expand-hint span {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--text-faint);
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       BOTTOM NAV
+       Position sticky at bottom — no fixed positioning
+       (Telegram Mini App handles the outer scroll frame).
+    ============================================================ */
+
+    /* Floating, detached bar — stays in place over the content (Telegram-style),
+       not glued to the edges. Items are soft blobs that fill with their own
+       color when active/pressed. */
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 14px;
+      width: calc(100% - 28px);
+      max-width: 460px;
+      z-index: 50;
+      display: flex;
+      gap: 4px;
+      padding: 6px;
+      background: rgba(20, 20, 22, 0.92);
+      border: 1px solid var(--border-hot);
+      border-radius: 30px;
+      box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+    }
+    /* While the media viewer is open, hide the floating nav. Its backdrop-filter
+       makes some mobile browsers paint it above the modal regardless of z-index,
+       so hiding it outright is the only reliable fix. */
+    body.viewer-open .bottom-nav { display: none; }
+
+    .bnav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      padding: 9px 0;
+      border-radius: 22px;
+      color: var(--text-faint);
+      /* overshoot easing gives the blob a gooey "pop" when it activates */
+      transition: background 0.32s cubic-bezier(0.3, 0.7, 0.4, 1.4),
+                  color 0.25s, transform 0.18s, box-shadow 0.3s;
+    }
+    .bnav-item i { font-size: 19px; color: inherit; }
+    .bnav-item span {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: inherit;
+    }
+    .bnav-item:active { transform: scale(0.9); }
+
+    /* Active blob — filled with the tab's own --c color */
+    .bnav-item.active {
+      background: var(--c, var(--green));
+      color: #0A0A0A;
+      box-shadow: 0 5px 16px -3px var(--c, var(--green));
+    }
+
+    /* ============================================================
+       ANIMATION OVERLAYS
+       .anim-overlay wraps a <canvas> or <lottie-player>.
+       Position absolute inside .cell or .exp-image.
+       Set pointer-events: none so taps pass through.
+       z-index: 1 puts it under the scanline (z-index: 2+).
+    ============================================================ */
+
+    .anim-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .anim-overlay canvas,
+    .anim-overlay video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* ============================================================
+       UTILITY — hide/show
+    ============================================================ */
+    .is-hidden { display: none !important; }
+
+    /* ============================================================
+       ADDED (not part of the locked design): intro splash overlay
+       + the About view. These are additive only — they do not touch
+       any existing rule, token, color, spacing, border, or font above.
+    ============================================================ */
+
+    /* Fullscreen muted intro video, shown on load when enabled in admin. */
+    .splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: var(--bg-page);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .splash video {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .splash-skip {
+      position: absolute;
+      bottom: 16px; right: 16px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-hot);
+      background: rgba(10, 10, 10, 0.7);
+      padding: 6px 10px;
+    }
+
+    /* About view — reuses existing tokens; only layout helpers are new. */
+    .about-view {
+      padding: 18px 14px 24px;
+      max-width: 1200px;          /* never stretch edge-to-edge on wide screens */
+      margin-left: auto;
+      margin-right: auto;
+    }
+    /* Logo runs the full content width on the About page. */
+    .about-logo-img { display: block; width: 100%; height: auto; margin: 0 0 18px; }
+    .about-text {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.9;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      margin: 14px auto 18px;
+      max-width: 640px;           /* ~65 characters — optimal reading width */
+      white-space: pre-line;
+    }
+    /* Job / advertising contact block (lower on the About page) */
+    .about-contact { max-width: 640px; margin: 26px auto 0;
+      padding-top: 18px; border-top: 1px solid var(--border-raw); }
+    .contact-toggle {
+      width: 100%; font-family: var(--font-mono); font-size: 12px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      background: transparent; color: var(--green); cursor: pointer;
+      border: 1px solid var(--green-dim); padding: 12px 14px;
+    }
+    .contact-toggle:active { background: var(--green-dim); }
+    .contact-form { margin-top: 12px; }
+    .contact-form.is-hidden { display: none; }
+    .contact-form textarea {
+      width: 100%; min-height: 96px; resize: vertical;
+      background: var(--bg-raised); border: 1px solid var(--border-raw);
+      color: var(--text-primary); font-family: var(--font-mono); font-size: 13px;
+      padding: 10px 12px; line-height: 1.6;
+    }
+    .contact-form .contact-send {
+      margin-top: 10px; width: 100%; font-family: var(--font-mono);
+      font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+      background: var(--green); color: #07140d; border: 0; padding: 12px 14px;
+      cursor: pointer; font-weight: 600;
+    }
+    .contact-note { font-family: var(--font-mono); font-size: 10px;
+      color: var(--text-faint); margin-top: 8px; letter-spacing: 0.05em; }
+    .social-list { display: flex; flex-direction: column; gap: 3px; }
+    .social-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 12px;
+      border: 1px solid var(--border-raw);
+      background: var(--bg-raised);
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+    .social-link:active { background: var(--bg-elevated); }
+    .social-link i { font-size: 18px; color: var(--green); }
+    .social-link span {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .empty-note {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      text-align: center;
+      padding: 40px 14px;
+    }
+
+    /* ============================================================
+       POPUP MODAL — tapping a wall cell opens the item in a centered
+       overlay window instead of inline. Additive: reuses the existing
+       .expanded-card internals, only repositioning it. The media shows
+       in FULL (object-fit: contain) so vertical images aren't cropped.
+    ============================================================ */
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      z-index: 9000;
+    }
+    .modal-backdrop.is-hidden { display: none !important; }
+
+    .expanded-card.as-modal {
+      position: fixed;
+      z-index: 9001;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(680px, calc(100vw - 28px));
+      max-width: min(680px, calc(100vw - 28px));
+      max-height: calc(100dvh - 40px);
+      overflow-y: auto;
+      margin: 0;
+    }
+
+    /* In the popup the image area hugs the picture and shows it whole. */
+    .expanded-card.as-modal .exp-image {
+      height: auto;
+      min-height: 180px;
+      max-height: 64vh;
+      background: #000;          /* clean letterbox, not the murky page grey */
+    }
+    /* The grunge scanline overlay is for wall thumbnails — in the full-screen
+       viewer it just dims the photo, so turn it off here. */
+    .expanded-card.as-modal .exp-image::after,
+    .expanded-card.as-modal.has-media #expGhost { display: none; }
+    .expanded-card.as-modal .exp-image img,
+    .expanded-card.as-modal .exp-image video {
+      position: static;
+      inset: auto;
+      width: 100%;
+      height: auto;
+      max-height: 64vh;
+      object-fit: contain;
+    }
+    /* Hide the decorative ghost type once a real picture is shown. */
+    .expanded-card.as-modal.has-media .exp-image-ghost { display: none; }
+
+    /* Readable text in the popup — the wall's faint ghost colors are too
+       low-contrast to read here, so lift them to real text colors. */
+    .expanded-card.as-modal #expDesc { color: var(--text-secondary); }
+    .expanded-card.as-modal .exp-meta { color: var(--text-secondary); }
+    .expanded-card.as-modal .exp-date { color: var(--text-secondary); }
+
+    /* ============================================================
+       HEADER ACTIONS — social icons, search, green Full-screen button
+    ============================================================ */
+    .topbar-actions { display: flex; align-items: center; gap: 8px; }
+    .header-social { display: flex; align-items: center; gap: 12px; }
+    .header-social a { display: inline-flex; }       /* brand color set inline in JS */
+    .header-social a i { font-size: 24px; }
+    .header-social a:active { opacity: 0.7; }
+
+    .hdr-icon-btn {
+      background: transparent;
+      border: 1px solid var(--border-raw);
+      color: var(--text-secondary);
+      width: 32px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border-radius: 4px;
+    }
+    .hdr-icon-btn i { font-size: 16px; }
+    .hdr-icon-btn:active { background: var(--bg-raised); }
+
+    .fs-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--green-bg);
+      border: 1px solid var(--green-dim);
+      color: var(--green);
+      cursor: pointer;
+      padding: 6px 12px; border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .fs-btn i { font-size: 14px; }
+    .fs-btn:active { border-color: var(--green); background: rgba(57, 232, 160, 0.12); }
+
+    /* Search bar */
+    .search-row {
+      padding: 8px 14px;
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border-raw);
+    }
+    .search-row input {
+      width: 100%;
+      background: var(--bg-page);
+      border: 1px solid var(--border-raw);
+      color: var(--text-primary);
+      padding: 9px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px; letter-spacing: 0.05em;
+      outline: none;
+    }
+    .search-row input:focus { border-color: var(--border-hot); }
+
+    /* Share sheet (network picker) */
+    .share-sheet {
+      position: fixed; inset: 0; z-index: 9100;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .share-sheet.is-hidden { display: none !important; }
+    .share-sheet-inner {
+      width: min(360px, 100%);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-hot);
+      padding: 8px;
+    }
+    .share-sheet-title {
+      font-size: 10px; color: var(--text-secondary);
+      padding: 8px 10px 10px;
+    }
+    .share-opt {
+      width: 100%;
+      display: flex; align-items: center; gap: 12px;
+      background: transparent; border: 0; border-top: 1px solid var(--border-raw);
+      color: var(--text-primary); cursor: pointer;
+      padding: 13px 10px;
+      font-family: var(--font-mono); font-size: 12px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      text-align: left;
+    }
+    .share-opt i { font-size: 18px; color: var(--green); width: 20px; text-align: center; }
+    .share-opt:active { background: var(--bg-raised); }
+
+    /* Popup share / forward / copy row */
+    .exp-share { display: flex; gap: 8px; padding-top: 10px; }
+    .share-btn {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      border: 1px solid var(--border-hot);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 9px 6px;
+      font-family: var(--font-mono);
+      font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .share-btn i { font-size: 15px; }
+    .share-btn:active { background: var(--bg-elevated); }
+
+    /* ============================================================
+       CATEGORY BUTTONS — the top filter row, styled as the gray 3D
+       push-buttons from button gero.txt. Built dynamically from the
+       categories created in /admin.
+    ============================================================ */
+    .filter-row { flex-wrap: wrap; row-gap: 8px; padding-top: 10px; padding-bottom: 8px; }
+
+    .cat-btn {
+      position: relative;
+      border: none;
+      background: transparent;
+      padding: 0;
+      outline: none;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      flex: 0 0 auto;
+    }
+    .cat-btn .cat-shadow {
+      position: absolute; inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      transform: translateY(2px);
+      transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1);
+    }
+    .cat-btn .cat-edge {
+      position: absolute; inset: 0;
+      border-radius: 6px;
+      background: linear-gradient(to left,
+        hsl(0, 0%, 12%) 0%, hsl(0, 0%, 26%) 8%,
+        hsl(0, 0%, 26%) 92%, hsl(0, 0%, 12%) 100%);
+    }
+    .cat-btn .cat-front {
+      position: relative;
+      display: block;
+      padding: 7px 14px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      background: hsl(0, 0%, 18%);
+      border-radius: 6px;
+      transform: translateY(-3px);
+      transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1);
+      user-select: none;
+    }
+    .cat-btn:hover  .cat-front  { transform: translateY(-4px); }
+    .cat-btn:active .cat-shadow { transform: translateY(1px); transition: transform 34ms; }
+    .cat-btn:active .cat-front  { transform: translateY(-1px); transition: transform 34ms; }
+    /* Active (selected) category — green face + edge */
+    .cat-btn.active .cat-front  { color: var(--green); background: hsl(0, 0%, 22%); }
+    .cat-btn.active .cat-edge   {
+      background: linear-gradient(to left,
+        var(--green-dim) 0%, #2c7d57 8%, #2c7d57 92%, var(--green-dim) 100%);
+    }
+
+    /* ============================================================
+       POSTS — list of long reads + the reader view
+    ============================================================ */
+    .posts-view {
+      padding: 14px;
+      max-width: 1000px; margin: 0 auto;
+      display: grid; gap: 14px;
+      /* One column on phones; cards become a grid on wider screens so a post
+         never stretches full-width (which made the cover a thin banner). */
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+    .post-card {
+      border: 1px solid var(--border-raw);
+      background: var(--bg-raised);
+      cursor: pointer; overflow: hidden;
+    }
+    .post-card:active { border-color: var(--border-hot); }
+    .post-card-cover {
+      width: 100%; height: 190px; object-fit: cover;
+      display: block; background: var(--bg-page);
+      border-bottom: 1px solid var(--border-raw);
+    }
+    .post-card-body { padding: 12px 14px 14px; }
+    .post-card-title {
+      font-family: var(--font-display); font-size: 18px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: -0.01em; color: var(--text-primary);
+      line-height: 1.15;
+    }
+    .post-card-meta {
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--green); margin-top: 6px;
+    }
+    .post-card-excerpt {
+      font-family: var(--font-mono); font-size: 11px; line-height: 1.7;
+      color: var(--text-secondary); margin-top: 8px;
+    }
+
+    .post-reader { padding: 16px 16px 30px; max-width: 760px; margin: 0 auto; }
+    .post-reader-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent; border: 1px solid var(--border-hot);
+      color: var(--text-secondary); cursor: pointer;
+      font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+      text-transform: uppercase; padding: 7px 12px; margin-bottom: 16px;
+    }
+    .post-reader-title {
+      font-family: var(--font-display); font-size: 26px; font-weight: 700;
+      text-transform: uppercase; color: var(--text-primary);
+      line-height: 1.1; margin-bottom: 12px;
+    }
+    .post-reader-body {
+      font-family: var(--font-mono); font-size: 13px; line-height: 1.95;
+      letter-spacing: 0.03em; color: var(--text-secondary); white-space: pre-line;
+    }
+    /* Lists need their indent back (the global reset zeroes ul/ol padding,
+       which pushed the 1. 2. 3. markers outside the text box). */
+    .post-reader-body ul, .post-reader-body ol { padding-left: 1.6em; margin: 8px 0; }
+    .post-reader-body li { margin: 3px 0; }
+    .post-reader-gallery {
+      column-count: 2; column-gap: var(--wall-gap); margin-top: 20px;
+    }
+    .post-reader-gallery .cell {
+      break-inside: avoid; -webkit-column-break-inside: avoid;
+      margin-bottom: var(--wall-gap); width: 100%; display: block;
+      grid-row-end: auto;   /* ignore the wall's masonry row span here */
+    }
+
+    /* Post category + hashtag chips */
+    .post-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 6px; }
+    .post-card-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+    .post-cat {
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em;
+      text-transform: uppercase; border: 1px solid var(--green-dim);
+      color: var(--green); padding: 3px 8px;
+    }
+    .post-tag {
+      font-family: var(--font-mono); font-size: 11px; padding: 2px 9px;
+      border: 1px solid var(--htc, #888); color: var(--htc, #888);
+    }
+
+    /* Post gallery reuses the main wall's masonry; just space it from the text. */
+    .post-wall { margin-top: 20px; padding-left: 0; padding-right: 0; }
+
+    /* Morphing expanding gallery — tap an image, it grows, others shift. */
+    .morph-gallery {
+      display: flex; gap: 6px; height: 300px; margin-top: 20px;
+    }
+    .morph-item {
+      flex: 1; min-width: 16px;
+      position: relative; overflow: hidden; cursor: pointer;
+      border: 1px solid var(--border-raw);
+      transition: flex 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .morph-item img, .morph-item video { width: 100%; height: 100%; object-fit: cover; }
+    .morph-item.active { flex: 6; }
+    @media (max-width: 560px) { .morph-gallery { height: 240px; } }
+
+    /* Post engagement + extra (video) media */
+    .post-actions {
+      display: flex; gap: 8px; margin-top: 22px;
+      padding-top: 14px; border-top: 1px solid var(--border-raw);
+    }
+    .post-extra-label {
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--text-faint); margin: 22px 0 8px;
+    }
+
+    /* ============================================================
+       RESPONSIVE — let the gallery spread on tablet / desktop /
+       Telegram Desktop and FILL the screen in fullscreen mode,
+       instead of staying a locked phone-width column.
+       Additive only: widens layout + adds wall columns. No colors,
+       fonts, or component internals are touched. Mobile (<560px)
+       keeps the original 2-column phone layout untouched.
+    ============================================================ */
+
+    /* Wall gains columns as the window widens */
+    @media (min-width: 560px)  { .wall { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (min-width: 820px)  { .wall { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    @media (min-width: 1100px) { .wall { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+    @media (min-width: 1500px) { .wall { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+
+    /* The post reader's gallery sits in a narrow (~760px) column, so it must
+       NOT follow the viewport-wide wall column counts above — keep it to 2–3. */
+    .post-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (min-width: 900px) { .post-wall { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+    /* On wide screens keep the expanded card, about view, and bars
+       readable/centered instead of stretching edge-to-edge. */
+    @media (min-width: 820px) {
+      .topbar     { padding-left: 20px; padding-right: 20px; }
+      .filter-row { padding-left: 20px; padding-right: 20px; }
+      .expanded-card {
+        max-width: 760px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .exp-image  { height: 400px; }
+    }
+
+  </style>
+
+  <!--
+    Tabler Icons — outline only, loaded from CDN.
+    Usage: <i class="ti ti-photo"></i>
+  -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+</head>
+
+<body>
+
+<!-- ── INTRO SPLASH ── injected/enabled from admin settings; muted, no sound,
+     plays once (any length) then reveals the app. Hidden unless configured. -->
+<div class="splash is-hidden" id="splash">
+  <video id="splashVideo" muted playsinline autoplay preload="auto"></video>
+  <div class="splash-skip" id="splashSkip">Skip</div>
+</div>
+
+<div class="app">
+
+  <!-- Dark backdrop behind the popup window (click to close). -->
+  <div class="modal-backdrop is-hidden" id="modalBackdrop"></div>
+
+  <!-- Share sheet — pick a network to share the current work. -->
+  <div class="share-sheet is-hidden" id="shareSheet">
+    <div class="share-sheet-inner">
+      <div class="share-sheet-title mono">Share via</div>
+      <button class="share-opt" data-share="whatsapp"><i class="ti ti-brand-whatsapp"></i><span>WhatsApp</span></button>
+      <button class="share-opt" data-share="x"><i class="ti ti-brand-x"></i><span>X</span></button>
+      <button class="share-opt" data-share="telegram"><i class="ti ti-brand-telegram"></i><span>Telegram</span></button>
+      <button class="share-opt" data-share="instagram"><i class="ti ti-brand-instagram"></i><span>Instagram</span></button>
+      <button class="share-opt" data-share="copy"><i class="ti ti-link"></i><span>Copy link</span></button>
+    </div>
+  </div>
+
+  <!-- ── SCROLL AREA ── -->
+  <main class="scroll-area" id="scrollArea">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div>
+        <div class="topbar-eyebrow">made by</div>
+        <div class="topbar-name" id="logo">Geroinzo</div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-actions">
+          <!-- Social icons chosen in admin ("show in header") -->
+          <div class="header-social" id="headerSocial"></div>
+          <button class="hdr-icon-btn" id="searchBtn" aria-label="Search">
+            <i class="ti ti-search"></i>
+          </button>
+          <button class="fs-btn" id="fullscreenBtn" aria-label="Full screen">
+            <i class="ti ti-maximize"></i><span>Full screen</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- SEARCH BAR — toggled by the header search button -->
+    <div class="search-row is-hidden" id="searchRow">
+      <input type="text" id="searchInput" placeholder="Search works…" autocomplete="off" />
+    </div>
+
+    <!-- CATEGORY BUTTONS — filled by JS from /api/categories -->
+    <div class="filter-row" id="filterRow"></div>
+
+    <!-- ── IMAGE WALL ──
+         Each .cell can hold:
+           - A real <img> (object-fit: cover, position absolute)
+           - A real <video autoplay muted loop playsinline>
+           - An .anim-overlay <canvas> for grunge animation
+         The .scan class adds scanline pseudo-element.
+         .cell-tall spans 2 rows.
+         Heights are set via inline style for the "random sizes" wall effect.
+         data-id links to the media objects in JS below.
+    -->
+    <!-- Cells are rendered by JS from GET /api/media using the exact
+         markup/classes above. Add real media in the /admin panel. -->
+    <div class="wall" id="wall"></div>
+
+    <!-- Empty-state note when no media has been added yet -->
+    <div class="empty-note is-hidden" id="emptyNote">No files yet · add media in /admin</div>
+
+    <!-- ── ABOUT VIEW ── shown when the About nav item is active -->
+    <div class="about-view is-hidden" id="aboutView">
+      <div id="aboutLogo"></div>
+      <div class="about-text" id="aboutText"></div>
+      <div class="raw-divider" style="margin-left:0;margin-right:0">
+        <div class="raw-divider-line"></div>
+        <span class="raw-divider-text">Links</span>
+        <div class="raw-divider-line"></div>
+      </div>
+      <div class="social-list" id="socialList"></div>
+
+      <!-- Job / advertising — tap to write a direct message to the owner. -->
+      <div class="about-contact">
+        <button class="contact-toggle" id="contactToggle">Job / Advertising — get in touch</button>
+        <div class="contact-form is-hidden" id="contactForm">
+          <textarea id="contactInput" placeholder="Your message — a job, an ad, a question…"></textarea>
+          <button class="contact-send" id="contactSend">Send message</button>
+          <div class="contact-note" id="contactNote"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── POSTS LIST ── long reads, each with its own media gallery -->
+    <div class="posts-view is-hidden" id="postsView"></div>
+
+    <!-- ── POST READER ── a single opened post -->
+    <div class="post-reader is-hidden" id="postReader"></div>
+
+    <!-- DIVIDER -->
+    <div class="raw-divider is-hidden" id="expDivider">
+      <div class="raw-divider-line"></div>
+      <span class="raw-divider-text">Expanded view</span>
+      <div class="raw-divider-line"></div>
+    </div>
+
+    <!-- ── EXPANDED CARD ──
+         Shown when user taps a wall cell.
+         Populated by JS (openItem function below).
+         Hidden by default via .is-hidden.
+    -->
+    <div class="expanded-card is-hidden" id="expandedCard">
+
+      <div class="exp-image scan" id="expImage">
+        <!-- Ghost type background (decorative) -->
+        <div class="exp-image-ghost" id="expGhost">
+          <span class="ghost-type" style="font-size:72px;color:rgba(57,232,160,0.08)">WHO<br>NEEDS</span>
+        </div>
+
+        <!--
+          SLOT: real media lives here.
+          For photo: <img src="..." alt="..." />
+          For video: <video src="..." autoplay muted loop playsinline></video>
+          Inject via JS into #expMediaSlot.
+        -->
+        <div id="expMediaSlot"></div>
+
+        <!-- Animation overlay on expanded image -->
+        <div class="anim-overlay" id="anim-expanded"></div>
+
+        <!-- Top-right controls -->
+        <div class="exp-image-actions">
+          <button class="icon-btn" id="btnBack" aria-label="Back">
+            <i class="ti ti-arrow-left"></i>
+          </button>
+          <button class="icon-btn" id="btnClose" aria-label="Close">
+            <i class="ti ti-x"></i>
+          </button>
+        </div>
+
+        <!-- Date stamp -->
+        <div class="exp-date" id="expDate">11 · 06 · 26</div>
+      </div>
+
+      <div class="exp-body">
+
+        <div class="exp-title-row">
+          <div>
+            <div class="exp-title" id="expTitle">Who Needs a Sober View?</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+            <span class="exp-meta" id="expYear">2024</span>
+          </div>
+        </div>
+
+        <div class="exp-meta" id="expDesc">
+          A TRIP BEYOND SIGHT &amp; MIND<br>
+          MANUFACTURED UNDER THE INFLUENCE
+        </div>
+
+        <!-- Action bar -->
+        <div class="exp-actions">
+
+          <!-- Like button — toggle liked state in JS -->
+          <button class="like-btn" id="likeBtn" aria-label="Like">
+            <i class="ti ti-heart"></i>
+            <span id="likeCount">312</span>
+          </button>
+
+          <!--
+            Donate Stars button.
+            Trigger: window.Telegram.WebApp.openInvoice(url, callback)
+            The invoice URL must be generated server-side via Bot API
+            createInvoiceLink with XTR (Telegram Stars) currency.
+          -->
+          <button class="star-btn" id="starBtn" aria-label="Send stars">
+            <i class="ti ti-star"></i>
+            <span>Send Stars</span>
+          </button>
+
+        </div>
+
+        <!-- Forward / copy / share — under the pay button -->
+        <div class="exp-share">
+          <button class="share-btn" id="forwardBtn" aria-label="Forward to a contact">
+            <i class="ti ti-send"></i><span>Forward</span>
+          </button>
+          <button class="share-btn" id="copyLinkBtn" aria-label="Copy link">
+            <i class="ti ti-link"></i><span>Copy link</span>
+          </button>
+          <button class="share-btn" id="shareBtn" aria-label="Share">
+            <i class="ti ti-share"></i><span>Share</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+    <!-- /expanded-card -->
+
+  </main>
+  <!-- /scroll-area -->
+
+  <!-- ── BOTTOM NAV ── -->
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button class="bnav-item active" data-view="wall" style="--c:#39E8A0" aria-label="Wall">
+      <i class="ti ti-layout-grid"></i>
+      <span>Wall</span>
+    </button>
+    <button class="bnav-item" data-view="posts" style="--c:#FFB020" aria-label="Posts">
+      <i class="ti ti-article"></i>
+      <span>Posts</span>
+    </button>
+    <button class="bnav-item" data-view="video" style="--c:#FF4D4D" aria-label="Video">
+      <i class="ti ti-player-play"></i>
+      <span>Video</span>
+    </button>
+    <button class="bnav-item" data-view="photo" style="--c:#2AABEE" aria-label="Photo">
+      <i class="ti ti-photo"></i>
+      <span>Photo</span>
+    </button>
+    <button class="bnav-item" data-view="about" style="--c:#B66BFF" aria-label="About">
+      <i class="ti ti-info-circle"></i>
+      <span>About</span>
+    </button>
+  </nav>
+
+</div>
+<!-- /app -->
+
+<script>
+  /* ============================================================
+     TELEGRAM MINI APP INIT
+  ============================================================ */
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();                          // fill available height
+    tg.setHeaderColor('#111114');         // match --bg-base
+    tg.setBackgroundColor('#0A0A0A');     // match --bg-page
+    // No closing confirmation — visitors have nothing to save on exit.
+    tg.disableClosingConfirmation?.();
+  }
+
+  /* ============================================================
+     MEDIA DATA
+     Loaded at runtime from the Python backend (GET /api/media) so the
+     admin panel can add items without editing this file. Keyed by id;
+     each value mirrors one /api/media entry.
+  ============================================================ */
+  let MEDIA = {};
+  const UID = tg?.initDataUnsafe?.user?.id || '';   // '' in a plain browser
+  const USERNAME = tg?.initDataUnsafe?.user?.username || '';   // Telegram @handle
+
+  /* ============================================================
+     DOM REFS
+  ============================================================ */
+  const card       = document.getElementById('expandedCard');
+  const expDivider = document.getElementById('expDivider');
+  const expTitle   = document.getElementById('expTitle');
+  const expDesc    = document.getElementById('expDesc');
+  const expDate    = document.getElementById('expDate');
+  const expYear    = document.getElementById('expYear');
+  const expMedia   = document.getElementById('expMediaSlot');
+  const likeBtn    = document.getElementById('likeBtn');
+  const likeCount  = document.getElementById('likeCount');
+  const starBtn    = document.getElementById('starBtn');
+  const starLabel  = starBtn.querySelector('span');
+
+  const wallEl     = document.getElementById('wall');
+  const filterRow  = document.querySelector('.filter-row');
+  const emptyNote  = document.getElementById('emptyNote');
+  const aboutView  = document.getElementById('aboutView');
+  const postsView  = document.getElementById('postsView');
+  const postReader = document.getElementById('postReader');
+  const scrollArea = document.getElementById('scrollArea');
+  const modalBackdrop = document.getElementById('modalBackdrop');
+
+  let currentId   = null;
+  let lastOpenAt  = 0;   // timestamp of last viewer open (iOS ghost-click guard)
+  let currentType = 'all';   // 'all' | 'video' | 'photo'  (bottom nav)
+  let currentCat  = 'all';   // 'all' | '<category id>'     (top buttons)
+  let currentSearch = '';    // search term (lowercased)
+  let MINIAPP = '';          // t.me mini-app link, set from /api/settings
+
+  /* ============================================================
+     WALL — render cells from the API using the existing markup
+     (.cell / .scan / .cell-label / .play-badge / .corner-mark).
+  ============================================================ */
+  /* Pick the element by the actual file, not just the stored type — so demo
+     poster images (or a mismatched upload) still display instead of a blank. */
+  const isVideoFile = src => /\.(mp4|webm|mov)(\?|$)/i.test(src || '');
+
+  function buildCell(m) {
+    const cell = document.createElement('div');
+    cell.className = 'cell scan';
+    cell.dataset.id = m.id;
+    cell.dataset.type = m.type;
+    cell.dataset.cats = (m.categories || []).join(',');
+    cell.dataset.search = ((m.title || '') + ' ' + (m.desc || '')).toLowerCase();
+
+    const locked = m.isLocked && !m.unlocked;
+
+    /* Real media keeps its natural proportions (CSS gives it width:100%;
+       height:auto). Locked / missing media falls back to a placeholder. */
+    if (!locked && m.src) {
+      if (isVideoFile(m.src)) {
+        /* Thumbnail only — load a single still frame, never autoplay. The
+           video actually plays (with controls) when opened in the popup. */
+        const v = document.createElement('video');
+        v.src = m.src + '#t=0.1';
+        v.muted = true;
+        v.preload = 'metadata';
+        v.setAttribute('playsinline', '');
+        v.addEventListener('loadedmetadata', () => relayoutCell(cell));
+        cell.appendChild(v);
+      } else {
+        const img = document.createElement('img');
+        img.src = m.src; img.alt = m.title;
+        img.addEventListener('load', () => relayoutCell(cell));
+        cell.appendChild(img);
+        if (img.complete) relayoutCell(cell);   // cached image: load already fired
+      }
+    } else {
+      cell.classList.add('is-placeholder');
+      const icon = document.createElement('i');
+      icon.className = 'ti ' + (locked ? 'ti-lock' : 'ti-photo') + ' cell-icon';
+      icon.setAttribute('aria-hidden', 'true');
+      cell.appendChild(icon);
+    }
+
+    /* Corner registration marks (decorative, from the locked design) */
+    cell.insertAdjacentHTML('beforeend',
+      '<span class="corner-mark cm-tl"></span><span class="corner-mark cm-br"></span>');
+
+    /* Bottom label strip */
+    const label = document.createElement('div');
+    label.className = 'cell-label';
+    const text = document.createElement('span');
+    text.className = 'cell-label-text';
+    text.textContent = m.date || m.title || '';
+    label.appendChild(text);
+    if (locked) {
+      label.insertAdjacentHTML('beforeend',
+        `<span class="stamp stamp-red">${m.minStars}★</span>`);
+    } else if (m.type === 'video') {
+      label.insertAdjacentHTML('beforeend', '<span class="stamp stamp-green">Vid</span>');
+    }
+    cell.appendChild(label);
+
+    if (m.type === 'video' && !locked) {
+      cell.insertAdjacentHTML('beforeend',
+        '<div class="play-badge"><i class="ti ti-player-play" aria-hidden="true"></i></div>');
+    }
+    return cell;
+  }
+
+  /* Masonry sizing: give each cell the right number of grid rows so it ends
+     exactly at its media's natural height. Computed from the media's aspect
+     ratio × the column width, so it never depends on overflow-clipped height. */
+  function relayoutCell(cell) {
+    const grid = cell.closest('.wall') || wallEl;
+    const style = getComputedStyle(grid);
+    const rowH = parseFloat(style.gridAutoRows) || 8;
+    const gap  = parseFloat(style.rowGap) || 0;
+    const media = cell.querySelector('img, video');
+    const w = cell.getBoundingClientRect().width;
+    let h;
+    if (media) {
+      const natW = media.naturalWidth  || media.videoWidth;
+      const natH = media.naturalHeight || media.videoHeight;
+      h = (natW && natH) ? (natH / natW) * w : cell.getBoundingClientRect().height;
+    } else {
+      h = cell.getBoundingClientRect().height || 140;   // placeholder
+    }
+    if (!h) return;
+    const span = Math.max(1, Math.ceil((h + gap) / (rowH + gap)));
+    cell.style.gridRowEnd = 'span ' + span;
+  }
+
+  function relayoutWall() {
+    wallEl.querySelectorAll('.cell').forEach(relayoutCell);
+  }
+
+  function renderWall() {
+    const items = Object.values(MEDIA);
+    wallEl.innerHTML = '';
+    items.forEach(m => wallEl.appendChild(buildCell(m)));
+    emptyNote.classList.toggle('is-hidden', items.length > 0);
+    updateVisibility();
+    relayoutWall();   // size placeholders + any already-cached media now
+  }
+
+  /* Recompute spans when the column width changes. */
+  let _resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(
+      () => document.querySelectorAll('.wall .cell').forEach(relayoutCell), 150);
+  });
+
+  async function loadMedia() {
+    try {
+      const res = await fetch('/api/media?uid=' + encodeURIComponent(UID));
+      const list = await res.json();
+      MEDIA = {};
+      list.forEach(m => { MEDIA[m.id] = m; });
+      renderWall();
+    } catch (err) {
+      console.error('Failed to load media', err);
+    }
+  }
+
+  /* ============================================================
+     EXPANDED CARD — open / close
+  ============================================================ */
+  function openItem(id) {
+    const m = MEDIA[id];
+    if (!m) return;
+    currentId = id;
+    setShareItem(id);
+
+    /* Count the open as a view (fire-and-forget). */
+    fetch('/api/media_view', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mediaId: id, uid: UID }),
+    }).catch(() => {});
+
+    const locked = m.isLocked && !m.unlocked;
+
+    expTitle.textContent  = m.title;
+    expDesc.innerHTML     = (m.desc || '').replace(/\n/g, '<br>');
+    expDate.textContent   = m.date;
+    expYear.textContent   = m.year;
+    likeCount.textContent = m.likes;
+    likeBtn.classList.toggle('liked', !!m.liked);
+
+    /* Stars button reflects donate vs unlock */
+    starLabel.textContent = locked ? `Unlock · ${m.minStars}★` : 'Send Stars';
+
+    /* Inject media (locked items stay hidden behind the ghost type) */
+    expMedia.innerHTML = '';
+    const hasMedia = !locked && !!m.src;
+    if (hasMedia) {
+      if (isVideoFile(m.src)) {
+        const v = document.createElement('video');
+        v.src = m.src;
+        v.controls = true;                 // play / pause / volume / seek
+        v.setAttribute('playsinline', '');
+        v.setAttribute('controlslist', 'nodownload');
+        expMedia.appendChild(v);
+      } else {
+        const img = document.createElement('img');
+        img.src = m.src; img.alt = m.title;
+        expMedia.appendChild(img);
+      }
+    }
+
+    /* Open as a centered popup window over a dark backdrop. */
+    card.classList.toggle('has-media', hasMedia);
+    card.classList.add('as-modal');
+    card.classList.remove('is-hidden');
+    modalBackdrop.classList.remove('is-hidden');
+    card.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+    document.body.classList.add('viewer-open');
+    lastOpenAt = Date.now();
+  }
+
+  function closeItem() {
+    card.classList.add('is-hidden');
+    card.classList.remove('as-modal', 'has-media');
+    modalBackdrop.classList.add('is-hidden');
+    expDivider.classList.add('is-hidden');
+    expMedia.innerHTML = '';
+    document.body.style.overflow = '';
+    document.body.classList.remove('viewer-open');
+    currentId = null;
+  }
+
+  wallEl.addEventListener('click', e => {
+    const cell = e.target.closest('.cell');
+    if (cell && cell.dataset.id) openItem(Number(cell.dataset.id));
+  });
+  document.getElementById('btnClose').addEventListener('click', closeItem);
+  document.getElementById('btnBack').addEventListener('click', closeItem);
+  /* Ignore the iOS "ghost click" that fires ~300ms after the opening tap and
+     lands on the just-shown backdrop (it was closing the viewer instantly). */
+  modalBackdrop.addEventListener('click', () => {
+    if (Date.now() - lastOpenAt < 400) return;
+    closeItem();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const sheet = document.getElementById('shareSheet');
+    if (!sheet.classList.contains('is-hidden')) { sheet.classList.add('is-hidden'); return; }
+    if (!card.classList.contains('is-hidden')) closeItem();
+  });
+
+  /* ============================================================
+     LIKE BUTTON — optimistic toggle, then POST /api/like
+  ============================================================ */
+  likeBtn.addEventListener('click', async () => {
+    if (!currentId) return;
+    const m = MEDIA[currentId];
+    const nowLiked = !m.liked;
+
+    /* Optimistic UI */
+    m.liked = nowLiked;
+    m.likes += nowLiked ? 1 : -1;
+    likeBtn.classList.toggle('liked', nowLiked);
+    likeCount.textContent = m.likes;
+
+    try {
+      const res = await fetch('/api/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mediaId: currentId, liked: nowLiked, uid: UID }),
+      });
+      const data = await res.json();
+      if (typeof data.likes === 'number') {
+        m.likes = data.likes;
+        likeCount.textContent = m.likes;
+      }
+    } catch (err) {
+      console.error('Like failed', err);   // optimistic state kept
+    }
+  });
+
+  /* ============================================================
+     DONATE STARS / UNLOCK — fetch invoice link, then openInvoice
+  ============================================================ */
+  starBtn.addEventListener('click', async () => {
+    if (!currentId) return;
+    let invoiceUrl;
+    try {
+      const res = await fetch('/api/invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mediaId: currentId, uid: UID }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Could not create invoice.'); return; }
+      invoiceUrl = data.invoiceUrl;
+    } catch (err) {
+      alert('Could not reach the server for the invoice.');
+      return;
+    }
+
+    if (!tg?.openInvoice) {
+      alert('Open this inside Telegram to pay with Stars.\nInvoice: ' + invoiceUrl);
+      return;
+    }
+    const paidId = currentId;
+    tg.openInvoice(invoiceUrl, async status => {
+      if (status === 'paid') await onPaid(paidId);
+    });
+  });
+
+  /* After payment: re-fetch the item so an unlocked src appears, then refresh. */
+  async function onPaid(id) {
+    try {
+      const res = await fetch(`/api/media/${id}?uid=` + encodeURIComponent(UID));
+      MEDIA[id] = await res.json();
+    } catch (err) { /* ignore; poller still recorded it */ }
+    renderWall();
+    if (currentId === id) openItem(id);
+    tg?.HapticFeedback?.notificationOccurred?.('success');
+  }
+
+  /* ============================================================
+     FILTERING + BOTTOM NAV VIEW SWITCHING
+  ============================================================ */
+  /* A cell is shown when it matches BOTH the active type (bottom nav) and
+     the active category (top buttons). A media item with several categories
+     therefore appears under each of them. */
+  function updateVisibility() {
+    wallEl.querySelectorAll('.cell').forEach(cell => {
+      const typeOk = currentType === 'all' || cell.dataset.type === currentType;
+      const cats   = (cell.dataset.cats || '').split(',').filter(Boolean);
+      const catOk  = currentCat === 'all' || cats.includes(currentCat);
+      const searchOk = !currentSearch || (cell.dataset.search || '').includes(currentSearch);
+      cell.style.display = (typeOk && catOk && searchOk) ? '' : 'none';
+    });
+  }
+
+  function setView(view) {
+    closeItem();
+    const isAbout = view === 'about';
+    const isPosts = view === 'posts';
+    const isWallLike = !isAbout && !isPosts;   // wall / video / photo
+
+    aboutView.classList.toggle('is-hidden', !isAbout);
+    postsView.classList.toggle('is-hidden', !isPosts);
+    if (!isPosts) postReader.classList.add('is-hidden');
+    wallEl.classList.toggle('is-hidden', !isWallLike);
+    filterRow.classList.toggle('is-hidden', !isWallLike);
+
+    if (isPosts) { showPosts(); loadPosts(); return; }
+    if (isAbout) { emptyNote.classList.add('is-hidden'); return; }
+
+    emptyNote.classList.toggle('is-hidden', Object.keys(MEDIA).length > 0);
+    currentType = (view === 'wall') ? 'all' : view;
+    updateVisibility();
+    relayoutWall();   // widths may have changed while another view was open
+  }
+
+  document.querySelector('.bottom-nav').addEventListener('click', e => {
+    const btn = e.target.closest('.bnav-item');
+    if (!btn) return;
+    document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    setView(btn.dataset.view);
+  });
+
+  /* ============================================================
+     CATEGORY BUTTONS — gray 3D buttons (button gero.txt style),
+     built from /api/categories. First button is always "All".
+  ============================================================ */
+  function catButton(id, name) {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (String(id) === currentCat ? ' active' : '');
+    btn.dataset.cat = id;
+    btn.innerHTML =
+      '<span class="cat-shadow"></span><span class="cat-edge"></span>' +
+      '<span class="cat-front"></span>';
+    btn.querySelector('.cat-front').textContent = name;   // safe text
+    return btn;
+  }
+
+  async function loadCategories() {
+    let cats = [];
+    try {
+      const res = await fetch('/api/categories');
+      cats = await res.json();
+    } catch (err) { /* leave just the All button */ }
+    filterRow.innerHTML = '';
+    filterRow.appendChild(catButton('all', 'All'));
+    cats.forEach(c => filterRow.appendChild(catButton(c.id, c.name)));
+  }
+
+  filterRow.addEventListener('click', e => {
+    const btn = e.target.closest('.cat-btn');
+    if (!btn) return;
+    currentCat = String(btn.dataset.cat);
+    filterRow.querySelectorAll('.cat-btn').forEach(b =>
+      b.classList.toggle('active', b === btn));
+    updateVisibility();
+  });
+
+  /* ============================================================
+     HEADER — search toggle + live search, fullscreen toggle
+  ============================================================ */
+  const searchBtn     = document.getElementById('searchBtn');
+  const searchRow     = document.getElementById('searchRow');
+  const searchInput   = document.getElementById('searchInput');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+  searchBtn.addEventListener('click', () => {
+    const shown = !searchRow.classList.toggle('is-hidden');
+    if (shown) {
+      searchInput.focus();
+    } else {
+      searchInput.value = ''; currentSearch = '';
+      updateVisibility(); relayoutWall();
+    }
+  });
+  searchInput.addEventListener('input', () => {
+    currentSearch = searchInput.value.trim().toLowerCase();
+    updateVisibility(); relayoutWall();
+  });
+
+  /* Prefer Telegram's fullscreen (with a real exit); fall back to the browser
+     Fullscreen API so it also works in a plain PC browser. */
+  function isFs() { return !!(tg?.isFullscreen || document.fullscreenElement); }
+  function updateFsLabel() {
+    fullscreenBtn.querySelector('span').textContent = isFs() ? 'Exit' : 'Full screen';
+  }
+  fullscreenBtn.addEventListener('click', () => {
+    if (tg?.requestFullscreen) {
+      if (tg.isFullscreen) tg.exitFullscreen?.(); else tg.requestFullscreen();
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+    } else {
+      document.documentElement.requestFullscreen?.();
+    }
+  });
+  tg?.onEvent?.('fullscreenChanged', updateFsLabel);
+  document.addEventListener('fullscreenchange', updateFsLabel);
+
+  /* ============================================================
+     SHARE / FORWARD / COPY LINK (in the popup)
+  ============================================================ */
+  let shareCtx = { link: '', title: 'Geroinzo' };
+  function shareLink() { return shareCtx.link || MINIAPP || location.href; }
+  function shareTitle() { return shareCtx.title || 'Geroinzo'; }
+  function setShareItem(id) {
+    let link = MINIAPP || location.href;
+    if (id && MINIAPP) link += (MINIAPP.includes('?') ? '&' : '?') + 'startapp=item' + id;
+    shareCtx = { link, title: MEDIA[id]?.title || 'Geroinzo' };
+  }
+  function setSharePost(id, title) {
+    let link = MINIAPP || location.href;
+    if (id && MINIAPP) link += (MINIAPP.includes('?') ? '&' : '?') + 'startapp=post' + id;
+    shareCtx = { link, title: title || 'Geroinzo' };
+  }
+  function tgShareUrl() {
+    return 'https://t.me/share/url?url=' + encodeURIComponent(shareLink()) +
+           '&text=' + encodeURIComponent(shareTitle());
+  }
+  function flashShare(id, msg) {
+    const span = document.getElementById(id).querySelector('span');
+    const prev = span.textContent;
+    span.textContent = msg;
+    setTimeout(() => { span.textContent = prev; }, 1200);
+  }
+
+  document.getElementById('forwardBtn').addEventListener('click', () => {
+    if (tg?.openTelegramLink) tg.openTelegramLink(tgShareUrl());
+    else window.open(tgShareUrl(), '_blank');
+  });
+
+  document.getElementById('copyLinkBtn').addEventListener('click', async () => {
+    const link = shareLink();
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch (err) {
+      const t = document.createElement('textarea');
+      t.value = link; document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); } catch (e) { /* ignore */ }
+      document.body.removeChild(t);
+    }
+    tg?.HapticFeedback?.notificationOccurred?.('success');
+    flashShare('copyLinkBtn', 'Copied');
+  });
+
+  /* Share opens a network picker (WhatsApp / X / Telegram / Instagram / copy). */
+  const shareSheet = document.getElementById('shareSheet');
+  function openExternal(url) { if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank'); }
+
+  document.getElementById('shareBtn').addEventListener('click', () => {
+    shareSheet.classList.remove('is-hidden');
+  });
+
+  shareSheet.addEventListener('click', async e => {
+    if (e.target === shareSheet) { shareSheet.classList.add('is-hidden'); return; }   // click backdrop
+    const opt = e.target.closest('.share-opt');
+    if (!opt) return;
+    const link = shareLink(), title = shareTitle(), enc = encodeURIComponent;
+    switch (opt.dataset.share) {
+      case 'whatsapp':
+        openExternal('https://wa.me/?text=' + enc(title + ' ' + link)); break;
+      case 'x':
+        openExternal('https://twitter.com/intent/tweet?text=' + enc(title) + '&url=' + enc(link)); break;
+      case 'telegram':
+        if (tg?.openTelegramLink) tg.openTelegramLink(tgShareUrl()); else openExternal(tgShareUrl()); break;
+      case 'instagram':
+        /* Instagram has no web link-share — copy the link, then open Instagram. */
+        try { await navigator.clipboard.writeText(link); } catch (err) { /* ignore */ }
+        openExternal('https://www.instagram.com/'); break;
+      case 'copy':
+        try { await navigator.clipboard.writeText(link); } catch (err) { /* ignore */ }
+        tg?.HapticFeedback?.notificationOccurred?.('success'); break;
+    }
+    shareSheet.classList.add('is-hidden');
+  });
+
+  /* ============================================================
+     POSTS — list of long reads; each opens a reader with its own
+     media gallery (media reuse the existing tap-to-open popup).
+  ============================================================ */
+  function showPosts() {
+    postReader.classList.add('is-hidden');
+    postsView.classList.remove('is-hidden');
+  }
+
+  async function loadPosts() {
+    let posts = [];
+    try { posts = await (await fetch('/api/posts?uid=' + encodeURIComponent(UID))).json(); }
+    catch (err) { /* ignore */ }
+    postsView.innerHTML = '';
+    if (!posts.length) {
+      postsView.innerHTML = '<div class="empty-note">No posts yet · add them in /admin</div>';
+      return;
+    }
+    posts.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'post-card';
+      card.dataset.postId = p.id;
+      card.innerHTML =
+        (p.cover ? `<img class="post-card-cover" src="${p.cover}" alt="">` : '') +
+        `<div class="post-card-body">
+           <div class="post-card-title"></div>
+           <div class="post-card-meta">${p.count} item${p.count === 1 ? '' : 's'}</div>
+           <div class="post-card-excerpt"></div>
+         </div>`;
+      card.querySelector('.post-card-title').textContent = p.title || 'Untitled';
+      card.querySelector('.post-card-excerpt').textContent = p.excerpt || '';
+      /* Category + hashtag chips on the card (same styling as the reader). */
+      if ((p.categories && p.categories.length) || (p.hashtags && p.hashtags.length)) {
+        const chipBox = document.createElement('div');
+        chipBox.className = 'post-card-chips';
+        (p.categories || []).forEach(c => {
+          const s = document.createElement('span'); s.className = 'post-cat';
+          s.textContent = c.name; chipBox.appendChild(s);
+        });
+        (p.hashtags || []).forEach(t => {
+          const s = document.createElement('span'); s.className = 'post-tag';
+          if (t.color) s.style.setProperty('--htc', t.color);
+          s.textContent = '#' + t.text; chipBox.appendChild(s);
+        });
+        card.querySelector('.post-card-body').appendChild(chipBox);
+      }
+      postsView.appendChild(card);
+    });
+  }
+
+  let currentPost = null;
+
+  async function openPost(id) {
+    let post;
+    try { post = await (await fetch('/api/posts/' + id + '?uid=' + encodeURIComponent(UID))).json(); }
+    catch (err) { return; }
+    currentPost = post;
+    setSharePost(id, post.title);
+
+    postReader.innerHTML = '';
+
+    const back = document.createElement('button');
+    back.className = 'post-reader-back';
+    back.innerHTML = '<i class="ti ti-arrow-left"></i> Back to posts';
+    back.addEventListener('click', showPosts);
+    postReader.appendChild(back);
+
+    const title = document.createElement('div');
+    title.className = 'post-reader-title';
+    title.textContent = post.title || '';
+    postReader.appendChild(title);
+
+    /* Category + hashtag chips */
+    if ((post.categories && post.categories.length) || (post.hashtags && post.hashtags.length)) {
+      const chips = document.createElement('div');
+      chips.className = 'post-chips';
+      (post.categories || []).forEach(c => {
+        const s = document.createElement('span'); s.className = 'post-cat';
+        s.textContent = c.name; chips.appendChild(s);
+      });
+      (post.hashtags || []).forEach(t => {
+        const s = document.createElement('span'); s.className = 'post-tag';
+        if (t.color) s.style.setProperty('--htc', t.color);
+        s.textContent = '#' + t.text; chips.appendChild(s);
+      });
+      postReader.appendChild(chips);
+    }
+
+    /* Rich text body (admin-authored HTML). */
+    const body = document.createElement('div');
+    body.className = 'post-reader-body';
+    body.innerHTML = post.body || '';
+    postReader.appendChild(body);
+
+    /* Gallery — same masonry layout as the main wall so images keep their
+       natural proportions (no fixed-height cropping). Images and videos share
+       one wall; tapping any cell opens it in the popup, exactly like the wall. */
+    const postMedia = [...(post.images || []), ...(post.videos || [])];
+    if (postMedia.length) {
+      const gal = document.createElement('div');
+      gal.className = 'wall post-wall';
+      postMedia.forEach(m => { MEDIA[m.id] = m; gal.appendChild(buildCell(m)); });
+      postReader.appendChild(gal);
+      requestAnimationFrame(() => gal.querySelectorAll('.cell').forEach(relayoutCell));
+    }
+
+    /* Like / Stars / Share — same routine as media. */
+    const actions = document.createElement('div');
+    actions.className = 'post-actions';
+    actions.innerHTML =
+      `<button class="like-btn ${post.liked ? 'liked' : ''}" id="postLikeBtn">
+         <i class="ti ti-heart"></i><span id="postLikeCount">${post.likes}</span>
+       </button>
+       <button class="star-btn" id="postStarBtn"><i class="ti ti-star"></i><span>Send Stars</span></button>
+       <button class="icon-btn" id="postShareBtn" aria-label="Share"><i class="ti ti-share"></i></button>`;
+    postReader.appendChild(actions);
+
+    postsView.classList.add('is-hidden');
+    postReader.classList.remove('is-hidden');
+    scrollArea.scrollTo({ top: 0 });
+  }
+
+  postsView.addEventListener('click', e => {
+    const card = e.target.closest('.post-card');
+    if (card) openPost(Number(card.dataset.postId));
+  });
+
+  postReader.addEventListener('click', async e => {
+    const cell = e.target.closest('.cell');
+    if (cell && cell.dataset.id) { openItem(Number(cell.dataset.id)); return; }
+
+    if (e.target.closest('#postShareBtn')) {
+      setSharePost(currentPost.id, currentPost.title);
+      document.getElementById('shareSheet').classList.remove('is-hidden');
+      return;
+    }
+    if (e.target.closest('#postLikeBtn') && currentPost) {
+      const btn = e.target.closest('#postLikeBtn');
+      const nowLiked = !btn.classList.contains('liked');
+      btn.classList.toggle('liked', nowLiked);
+      const cEl = document.getElementById('postLikeCount');
+      cEl.textContent = Math.max(0, Number(cEl.textContent) + (nowLiked ? 1 : -1));
+      try {
+        const res = await fetch('/api/post_like', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: currentPost.id, liked: nowLiked, uid: UID }),
+        });
+        const data = await res.json();
+        if (typeof data.likes === 'number') cEl.textContent = data.likes;
+      } catch (err) { /* keep optimistic */ }
+      return;
+    }
+    if (e.target.closest('#postStarBtn') && currentPost) {
+      let invoiceUrl;
+      try {
+        const res = await fetch('/api/post_invoice', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: currentPost.id, uid: UID }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'Could not create invoice.'); return; }
+        invoiceUrl = data.invoiceUrl;
+      } catch (err) { alert('Could not reach the server for the invoice.'); return; }
+      if (tg?.openInvoice) tg.openInvoice(invoiceUrl, () => {});
+      else alert('Open this inside Telegram to pay with Stars.');
+    }
+  });
+
+  /* ============================================================
+     SETTINGS — logo, About view, social links, intro splash
+  ============================================================ */
+  function tablerClass(platform) {
+    const p = (platform || '').trim();
+    return p.startsWith('ti-') ? p : (p ? 'ti-' + p : 'ti-link');
+  }
+
+  /* Brand colors for the header social icons. */
+  function brandColor(platform) {
+    const p = (platform || '').toLowerCase();
+    if (p.includes('instagram')) return '#E1306C';
+    if (p.includes('tiktok'))    return '#25F4EE';
+    if (p.includes('youtube'))   return '#FF0000';
+    if (p.includes('whatsapp'))  return '#25D366';
+    if (p.includes('telegram'))  return '#2AABEE';
+    if (p.includes('facebook'))  return '#1877F2';
+    if (p.includes('behance'))   return '#1769FF';
+    if (p.includes('twitter') || p === 'brand-x' || p === 'x') return '#FFFFFF';
+    if (p.includes('mail'))      return '#39E8A0';
+    return 'var(--green)';
+  }
+
+  async function loadSettings() {
+    let s;
+    try {
+      const res = await fetch('/api/settings');
+      s = await res.json();
+    } catch (err) { return; }
+
+    /* Header shows the brand TEXT only — the logo image lives on the About page. */
+    const logo = document.getElementById('logo');
+    if (s.logoText) logo.textContent = s.logoText;
+
+    /* About view — logo image full-width, then the blurb. */
+    const aboutLogo = document.getElementById('aboutLogo');
+    if (s.logoImage) {
+      aboutLogo.innerHTML = `<img class="about-logo-img" src="${s.logoImage}" alt="logo">`;
+    } else {
+      aboutLogo.innerHTML = `<div class="topbar-name">${s.logoText || 'Geroinzo'}</div>`;
+    }
+    document.getElementById('aboutText').textContent = s.aboutText || '';
+
+    const socialList = document.getElementById('socialList');
+    socialList.innerHTML = '';
+    (s.social || []).forEach(link => {
+      const a = document.createElement('a');
+      a.className = 'social-link';
+      a.href = link.url; a.target = '_blank'; a.rel = 'noopener';
+      a.innerHTML = `<i class="ti ${tablerClass(link.platform)}"></i>` +
+                    `<span>${link.label || link.platform || link.url}</span>`;
+      socialList.appendChild(a);
+    });
+
+    /* Mini-app link for share/copy. */
+    MINIAPP = s.miniAppLink || '';
+
+    /* Header social icons — only those flagged "show in header" in admin. */
+    const headerSocial = document.getElementById('headerSocial');
+    headerSocial.innerHTML = '';
+    (s.social || []).filter(l => l.inHeader).forEach(link => {
+      const a = document.createElement('a');
+      a.href = link.url; a.target = '_blank'; a.rel = 'noopener';
+      a.title = link.label || link.platform || '';
+      a.style.color = brandColor(link.platform);
+      a.innerHTML = `<i class="ti ${tablerClass(link.platform)}"></i>`;
+      headerSocial.appendChild(a);
+    });
+
+    /* Intro splash video — muted, plays once (any length), then reveals app */
+    if (s.splashEnabled && s.splashSrc) playSplash(s.splashSrc);
+  }
+
+  function playSplash(src) {
+    const splash = document.getElementById('splash');
+    const video  = document.getElementById('splashVideo');
+    const done = () => splash.classList.add('is-hidden');
+    video.src = src;
+    splash.classList.remove('is-hidden');
+    video.addEventListener('ended', done, { once: true });
+    video.addEventListener('error', done, { once: true });
+    document.getElementById('splashSkip').addEventListener('click', done);
+    splash.addEventListener('click', done);
+    const p = video.play();
+    if (p && p.catch) p.catch(() => { /* autoplay blocked — tap to skip */ });
+  }
+
+  /* ── Job / advertising contact form ── */
+  (function setupContact() {
+    const toggle = document.getElementById('contactToggle');
+    const form   = document.getElementById('contactForm');
+    const input  = document.getElementById('contactInput');
+    const send   = document.getElementById('contactSend');
+    const note   = document.getElementById('contactNote');
+    if (!toggle) return;
+    toggle.addEventListener('click', () => {
+      form.classList.toggle('is-hidden');
+      if (!form.classList.contains('is-hidden')) input.focus();
+    });
+    send.addEventListener('click', async () => {
+      const message = input.value.trim();
+      if (!message) { input.focus(); return; }
+      send.disabled = true;
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, uid: UID, username: USERNAME }),
+        });
+        if (res.ok) {
+          input.value = '';
+          note.textContent = 'Sent — thank you! The owner will get back to you.';
+          form.classList.add('is-hidden');
+        } else {
+          note.textContent = 'Could not send. Please try again.';
+        }
+      } catch (err) {
+        note.textContent = 'Could not send. Please try again.';
+      }
+      send.disabled = false;
+    });
+  })();
+
+  /* ============================================================
+     BOOT
+  ============================================================ */
+  loadSettings();
+  loadCategories();
+  loadMedia();
+
+  /* Log this app open for overall visitor stats (fire-and-forget). */
+  fetch('/api/visit', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uid: UID }),
+  }).catch(() => {});
+
+</script>
+</body>
+</html>

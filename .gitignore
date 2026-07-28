@@ -1,0 +1,21 @@
+# Secrets & local data
+.env
+*.db
+*.sqlite3
+
+# Uploaded media (the recipient adds their own via the admin panel)
+static/media/*
+!static/media/.gitkeep
+
+# Runtime logs (written by restart.ps1 / share.bat)
+app.out
+app.err
+tunnel.log
+tunnel.out
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
