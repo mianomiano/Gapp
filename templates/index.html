@@ -89,15 +89,6 @@
       --font-mono:     'Share Tech Mono', ui-monospace, 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace;  /* swap to GeroinzoMono  */
       --font-stamp:    'Share Tech Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;  /* swap to GeroinzoStamp */
 
-      /* Scanline overlay — applied via pseudo-element on image cells */
-      --scanline: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 3px,
-        rgba(0, 0, 0, 0.18) 3px,
-        rgba(0, 0, 0, 0.18) 4px
-      );
-
       /* Layout */
       --wall-gap:   3px;
       --cell-radius: 0;           /* grunge = no rounding anywhere */
@@ -171,20 +162,6 @@
       line-height: 0.9;
       user-select: none;
       pointer-events: none;
-    }
-
-    /* ============================================================
-       SCANLINE OVERLAY — add class .scan to any image cell
-    ============================================================ */
-
-    .scan { position: relative; }
-    .scan::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: var(--scanline);
-      pointer-events: none;
-      z-index: 2;
     }
 
     /* ============================================================
@@ -474,16 +451,6 @@
       z-index: 1;
     }
 
-    /* Scanline always on top of media */
-    .exp-image::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: var(--scanline);
-      pointer-events: none;
-      z-index: 3;
-    }
-
     /* Top-right action buttons on expanded image */
     .exp-image-actions {
       position: absolute;
@@ -697,7 +664,7 @@
        .anim-overlay wraps a <canvas> or <lottie-player>.
        Position absolute inside .cell or .exp-image.
        Set pointer-events: none so taps pass through.
-       z-index: 1 puts it under the scanline (z-index: 2+).
+       z-index: 1 puts it under the label / corner marks (z-index: 2+).
     ============================================================ */
 
     .anim-overlay {
@@ -863,9 +830,6 @@
       max-height: 64vh;
       background: #000;          /* clean letterbox, not the murky page grey */
     }
-    /* The grunge scanline overlay is for wall thumbnails — in the full-screen
-       viewer it just dims the photo, so turn it off here. */
-    .expanded-card.as-modal .exp-image::after,
     .expanded-card.as-modal.has-media #expGhost { display: none; }
     .expanded-card.as-modal .exp-image img,
     .expanded-card.as-modal .exp-image video {
@@ -1250,7 +1214,6 @@
            - A real <img> (object-fit: cover, position absolute)
            - A real <video autoplay muted loop playsinline>
            - An .anim-overlay <canvas> for grunge animation
-         The .scan class adds scanline pseudo-element.
          .cell-tall spans 2 rows.
          Heights are set via inline style for the "random sizes" wall effect.
          data-id links to the media objects in JS below.
@@ -1304,7 +1267,7 @@
     -->
     <div class="expanded-card is-hidden" id="expandedCard">
 
-      <div class="exp-image scan" id="expImage">
+      <div class="exp-image" id="expImage">
         <!-- Ghost type background (decorative) -->
         <div class="exp-image-ghost" id="expGhost">
           <span class="ghost-type" style="font-size:72px;color:rgba(57,232,160,0.08)">WHO<br>NEEDS</span>
@@ -1477,7 +1440,7 @@
 
   /* ============================================================
      WALL — render cells from the API using the existing markup
-     (.cell / .scan / .cell-label / .play-badge / .corner-mark).
+     (.cell / .cell-label / .play-badge / .corner-mark).
   ============================================================ */
   /* Pick the element by the actual file, not just the stored type — so demo
      poster images (or a mismatched upload) still display instead of a blank. */
@@ -1485,7 +1448,7 @@
 
   function buildCell(m) {
     const cell = document.createElement('div');
-    cell.className = 'cell scan';
+    cell.className = 'cell';
     cell.dataset.id = m.id;
     cell.dataset.type = m.type;
     cell.dataset.cats = (m.categories || []).join(',');
