@@ -29,6 +29,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 import database as db
+import i18n
 
 load_dotenv()
 
@@ -65,17 +66,23 @@ def brand_name():
 
 
 @app.context_processor
-def inject_brand():
-    """Make the configured name and logo available to every template.
+def inject_globals():
+    """Per-copy identity and language, available to every template.
 
-    Rendered server-side so the header shows the right mark on first paint
-    instead of flashing the text name until /api/settings comes back.
+    Rendered server-side so the header shows the right mark and the right
+    language on first paint, instead of flashing defaults until
+    /api/settings comes back.
     """
     settings = db.get_settings()
     logo = (settings.get("logo_image") or "").strip()
+    lang = i18n.current_language()
+    strings = i18n.translations(lang)
     return {
         "brand": (settings.get("logo_text") or "").strip() or DEFAULT_BRAND,
         "brand_logo": f"/static/media/{logo}" if logo else "",
+        "lang": lang,
+        "t": lambda key: strings.get(key, key),
+        "i18n_json": json.dumps(strings, ensure_ascii=False),
     }
 
 

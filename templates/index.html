@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -1841,6 +1841,12 @@
   /* ============================================================
      SHARE / FORWARD / COPY LINK (in the popup)
   ============================================================ */
+  /* UI strings for everything JavaScript sets at runtime. Same dictionary
+     Jinja uses via t(), so markup and script can never drift apart. */
+  window.I18N = {{ i18n_json | safe }};
+  window.T = function (key) { return window.I18N[key] || key; };
+  const T = window.T;
+
   /* Untitled items fall back to this copy's own name, never a fixed brand. */
   const BRAND = {{ brand | tojson }};
   let shareCtx = { link: '', title: BRAND };
