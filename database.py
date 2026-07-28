@@ -113,6 +113,14 @@ def init_db():
     if "post_id" not in cols:
         cur.execute("ALTER TABLE media ADD COLUMN post_id INTEGER NOT NULL DEFAULT 0")
 
+    # Migration: media stores its pixel size, so the wall can reserve the right
+    # space before the file loads instead of guessing and then snapping.
+    # 0 means unknown (rows added before this migration) — the client falls
+    # back to measuring on load, as it always did.
+    for col in ("width", "height"):
+        if col not in cols:
+            cur.execute(f"ALTER TABLE media ADD COLUMN {col} INTEGER NOT NULL DEFAULT 0")
+
     # Migration: posts gain categories, hashtags, likes and a stars amount.
     pcols = [r["name"] for r in cur.execute("PRAGMA table_info(posts)").fetchall()]
     for col, ddl in (
@@ -268,7 +276,8 @@ def normalize_category_ids(value):
 
 
 def add_media(filename, m_type, title, description, date_label, year, size,
-              is_locked, min_stars, category_ids="", post_id=0):
+              is_locked, min_stars, category_ids="", post_id=0,
+              width=0, height=0):
     conn = get_conn()
     cur = conn.cursor()
     # New item goes to the TOP of the wall (newest first); post media append.
@@ -284,11 +293,13 @@ def add_media(filename, m_type, title, description, date_label, year, size,
     cur.execute(
         """INSERT INTO media
            (filename, type, title, description, date_label, year, size,
-            is_locked, min_stars, likes, sort_order, created_at, category_ids, post_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)""",
+            is_locked, min_stars, likes, sort_order, created_at, category_ids,
+            post_id, width, height)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)""",
         (filename, m_type, title, description, date_label, year, size,
          1 if is_locked else 0, max(0, int(min_stars)), order,
-         int(time.time()), normalize_category_ids(category_ids), int(post_id)),
+         int(time.time()), normalize_category_ids(category_ids), int(post_id),
+         int(width), int(height)),
     )
     conn.commit()
     new_id = cur.lastrowid

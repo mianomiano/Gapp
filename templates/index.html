@@ -141,17 +141,6 @@
     .stamp-white { color: var(--text-secondary);border-color: var(--border-hot); }
     .stamp-red   { color: var(--red);           border-color: var(--red);        }
 
-    /* Ghost watermark type — huge, very low opacity, decorative */
-    .ghost-type {
-      font-family: var(--font-display);
-      font-weight: 700;
-      letter-spacing: -0.05em;
-      text-transform: uppercase;
-      line-height: 0.9;
-      user-select: none;
-      pointer-events: none;
-    }
-
     /* ============================================================
        CORNER CROSSHAIR MARKS
        Add four .corner-mark spans inside any cell for the
@@ -354,16 +343,6 @@
     }
     .play-badge i { font-size: 11px; color: var(--text-secondary); }
 
-    /* Ghost type inside cells */
-    .cell-ghost {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
     /* Cell icon (placeholder when no real image loaded) */
     .cell-icon {
       position: relative;
@@ -420,16 +399,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-
-    /* Background ghost type in image area */
-    .exp-image-ghost {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
     }
 
     /* Actual <img> or <video> tag goes here — set object-fit: cover */
@@ -822,7 +791,6 @@
       max-height: 64vh;
       background: #000;          /* clean letterbox, not the murky page grey */
     }
-    .expanded-card.as-modal.has-media #expGhost { display: none; }
     .expanded-card.as-modal .exp-image img,
     .expanded-card.as-modal .exp-image video {
       position: static;
@@ -833,7 +801,6 @@
       object-fit: contain;
     }
     /* Hide the decorative ghost type once a real picture is shown. */
-    .expanded-card.as-modal.has-media .exp-image-ghost { display: none; }
 
     /* Readable text in the popup — the wall's faint ghost colors are too
        low-contrast to read here, so lift them to real text colors. */
@@ -1053,15 +1020,6 @@
        which pushed the 1. 2. 3. markers outside the text box). */
     .post-reader-body ul, .post-reader-body ol { padding-left: 1.6em; margin: 8px 0; }
     .post-reader-body li { margin: 3px 0; }
-    .post-reader-gallery {
-      column-count: 2; column-gap: var(--wall-gap); margin-top: 20px;
-    }
-    .post-reader-gallery .cell {
-      break-inside: avoid; -webkit-column-break-inside: avoid;
-      margin-bottom: var(--wall-gap); width: 100%; display: block;
-      grid-row-end: auto;   /* ignore the wall's masonry row span here */
-    }
-
     /* Post category + hashtag chips */
     .post-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 6px; }
     .post-card-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
@@ -1077,20 +1035,6 @@
 
     /* Post gallery reuses the main wall's masonry; just space it from the text. */
     .post-wall { margin-top: 20px; padding-left: 0; padding-right: 0; }
-
-    /* Morphing expanding gallery — tap an image, it grows, others shift. */
-    .morph-gallery {
-      display: flex; gap: 6px; height: 300px; margin-top: 20px;
-    }
-    .morph-item {
-      flex: 1; min-width: 16px;
-      position: relative; overflow: hidden; cursor: pointer;
-      border: 1px solid var(--border-raw);
-      transition: flex 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .morph-item img, .morph-item video { width: 100%; height: 100%; object-fit: cover; }
-    .morph-item.active { flex: 6; }
-    @media (max-width: 560px) { .morph-gallery { height: 240px; } }
 
     /* Post engagement + extra (video) media */
     .post-actions {
@@ -1270,11 +1214,6 @@
     <div class="expanded-card is-hidden" id="expandedCard">
 
       <div class="exp-image" id="expImage">
-        <!-- Ghost type background (decorative) -->
-        <div class="exp-image-ghost" id="expGhost">
-          <span class="ghost-type" style="font-size:72px;color:rgba(57,232,160,0.08)"></span>
-        </div>
-
         <!--
           SLOT: real media lives here.
           For photo: <img src="..." alt="..." />
@@ -1449,6 +1388,15 @@
   function buildCell(m) {
     const cell = document.createElement('div');
     cell.className = 'cell';
+
+    /* Reserve the right shape before the file arrives, so the wall does not
+       jump as images load. Unknown size (videos, or items added before the
+       server started recording dimensions) falls back to measuring on load. */
+    if (m.width && m.height) {
+      cell.style.aspectRatio = `${m.width} / ${m.height}`;
+      cell.dataset.w = m.width;
+      cell.dataset.h = m.height;
+    }
     cell.dataset.id = m.id;
     cell.dataset.type = m.type;
     cell.dataset.cats = (m.categories || []).join(',');
@@ -1514,20 +1462,31 @@
   /* Masonry sizing: give each cell the right number of grid rows so it ends
      exactly at its media's natural height. Computed from the media's aspect
      ratio × the column width, so it never depends on overflow-clipped height. */
+  /* Height a placeholder cell occupies — matches .cell.is-placeholder's
+     min-height. Fixed, because measuring one is circular: the grid is what
+     sets its height, so it would only ever report back its own last span. */
+  const PLACEHOLDER_H = 140;
+
   function relayoutCell(cell) {
     const grid = cell.closest('.wall') || wallEl;
     const style = getComputedStyle(grid);
     const rowH = parseFloat(style.gridAutoRows) || 8;
     const gap  = parseFloat(style.rowGap) || 0;
-    const media = cell.querySelector('img, video');
     const w = cell.getBoundingClientRect().width;
+    if (!w) return;                     // hidden or not laid out yet
+
+    const media = cell.querySelector('img, video');
     let h;
     if (media) {
-      const natW = media.naturalWidth  || media.videoWidth;
-      const natH = media.naturalHeight || media.videoHeight;
-      h = (natW && natH) ? (natH / natW) * w : cell.getBoundingClientRect().height;
+      /* Prefer the size the server recorded: it is known before the file
+         loads, so the cell is right on first paint. Fall back to the loaded
+         element for videos and pre-migration rows. */
+      const natW = Number(cell.dataset.w) || media.naturalWidth  || media.videoWidth;
+      const natH = Number(cell.dataset.h) || media.naturalHeight || media.videoHeight;
+      if (!natW || !natH) return;       // nothing to go on yet; load fires later
+      h = (natH / natW) * w;
     } else {
-      h = cell.getBoundingClientRect().height || 140;   // placeholder
+      h = PLACEHOLDER_H;
     }
     if (!h) return;
     const span = Math.max(1, Math.ceil((h + gap) / (rowH + gap)));
@@ -2028,7 +1987,7 @@
     /* Gallery — same masonry layout as the main wall so images keep their
        natural proportions (no fixed-height cropping). Images and videos share
        one wall; tapping any cell opens it in the popup, exactly like the wall. */
-    const postMedia = [...(post.images || []), ...(post.videos || [])];
+    const postMedia = post.media || [];
     if (postMedia.length) {
       const gal = document.createElement('div');
       gal.className = 'wall post-wall';

@@ -30,6 +30,7 @@ from werkzeug.utils import secure_filename
 
 import database as db
 import i18n
+import imagesize
 import theme
 
 load_dotenv()
@@ -113,7 +114,12 @@ def type_for_ext(extension):
 
 def save_upload(file_storage):
     """Validate and store an uploaded file under a randomized name. Returns
-    (stored_filename, detected_type) or raises ValueError."""
+    (stored_filename, detected_type, width, height) or raises ValueError.
+
+    Width/height come from the file header so the wall can reserve the right
+    space before the image loads. Videos report (0, 0) — the client measures
+    those on load, as it did for everything before.
+    """
     if not file_storage or not file_storage.filename:
         raise ValueError("No file provided.")
     extension = ext_of(file_storage.filename)
@@ -121,8 +127,13 @@ def save_upload(file_storage):
         raise ValueError(f"Unsupported file type: .{extension}")
     safe_stem = secure_filename(file_storage.filename.rsplit(".", 1)[0]) or "file"
     stored = f"{safe_stem[:40]}_{secrets.token_hex(6)}.{extension}"
+
+    header = file_storage.stream.read(64 * 1024)
+    file_storage.stream.seek(0)
+    width, height = imagesize.dimensions(header)
+
     file_storage.save(MEDIA_DIR / stored)
-    return stored, type_for_ext(extension)
+    return stored, type_for_ext(extension), width, height
 
 
 def media_public(item, tg_user_id=None):
@@ -144,6 +155,10 @@ def media_public(item, tg_user_id=None):
         "liked": db.user_liked(item["id"], tg_user_id),
         "categories": [int(x) for x in (item.get("category_ids") or "").split(",") if x],
         "src": f"/static/media/{item['filename']}" if unlocked else "",
+        # 0 when unknown (videos, or rows predating the width/height columns);
+        # the client then measures the element on load instead.
+        "width": item["width"],
+        "height": item["height"],
     }
 
 
@@ -344,17 +359,16 @@ def api_post_one(post_id):
     # Count the open as a view — but not the admin's own previews.
     if not session.get("is_admin"):
         db.record_post_view(post_id, uid)
+    # One list, uncapped. This used to truncate images to 15 with no warning
+    # and split them from videos, which the client immediately re-merged.
     media = db.list_post_media(post_id)
-    images = [media_public(m, uid) for m in media if m["type"] != "video"][:15]
-    videos = [media_public(m, uid) for m in media if m["type"] == "video"]
     return jsonify({
         "id": post["id"],
         "title": post["title"],
         "body": post["body"],
         "categories": _post_categories(post),
         "hashtags": _post_hashtags(post),
-        "images": images,
-        "videos": videos,
+        "media": [media_public(m, uid) for m in media],
         "likes": db.post_like_total(post_id),
         "liked": db.user_liked_post(post_id, uid),
         "minStars": post["min_stars"],
@@ -471,7 +485,7 @@ def admin_list_media():
 @admin_required
 def admin_add_media():
     try:
-        stored, detected_type = save_upload(request.files.get("file"))
+        stored, detected_type, width, height = save_upload(request.files.get("file"))
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -487,6 +501,8 @@ def admin_add_media():
         is_locked=form.get("is_locked") in ("1", "true", "on", True),
         min_stars=form.get("min_stars", 1) or 1,
         category_ids=form.getlist("category_ids"),
+        width=width,
+        height=height,
     )
     return jsonify({"ok": True, "id": media_id})
 
@@ -499,11 +515,12 @@ def admin_update_media(media_id):
     # Optional file replacement.
     if request.files.get("file"):
         try:
-            stored, detected_type = save_upload(request.files.get("file"))
+            stored, detected_type, width, height = save_upload(request.files.get("file"))
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
         old = db.get_media(media_id)
-        db.update_media(media_id, {"filename": stored, "type": detected_type})
+        db.update_media(media_id, {"filename": stored, "type": detected_type,
+                                   "width": width, "height": height})
         _remove_file(old["filename"])
     fields = request.form.to_dict() if request.form else (request.get_json(silent=True) or {})
     fields.pop("file", None)
@@ -672,12 +689,12 @@ def _save_post_media(post_id):
         if not fs or not fs.filename:
             continue
         try:
-            stored, detected = save_upload(fs)
+            stored, detected, width, height = save_upload(fs)
         except ValueError:
             continue
         db.add_media(filename=stored, m_type=detected, title="", description="",
                      date_label="", year="", size="medium", is_locked=False,
-                     min_stars=1, post_id=post_id)
+                     min_stars=1, post_id=post_id, width=width, height=height)
 
 
 @app.route("/api/admin/posts", methods=["POST"])
@@ -814,7 +831,7 @@ def admin_set_settings():
     # Logo image upload (optional).
     if request.files.get("logo_image"):
         try:
-            stored, _ = save_upload(request.files.get("logo_image"))
+            stored, _, _, _ = save_upload(request.files.get("logo_image"))
             db.set_setting("logo_image", stored)
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
@@ -826,7 +843,7 @@ def admin_set_settings():
     # Splash video upload (optional).
     if request.files.get("splash_video"):
         try:
-            stored, detected = save_upload(request.files.get("splash_video"))
+            stored, detected, _, _ = save_upload(request.files.get("splash_video"))
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
         if detected != "video":
