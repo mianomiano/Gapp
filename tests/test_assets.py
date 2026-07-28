@@ -44,6 +44,24 @@ def test_icon_stylesheet_is_served_locally(client):
     assert client.get("/static/vendor/tabler-icons.min.css").status_code == 200
 
 
+def test_icon_font_actually_loads(client):
+    """A 200 on the stylesheet is not enough — the first vendoring shipped a
+    CSS whose src: was empty, so every icon rendered as a blank box."""
+    css = client.get("/static/vendor/tabler-icons.min.css").data.decode("utf-8")
+
+    src = re.search(r"src:\s*([^;}]+)", css)
+    assert src, "no src: descriptor in the icon CSS"
+    assert src.group(1).strip(), "src: descriptor is empty — icons will not render"
+
+    url = re.search(r"url\(['\"]?([^'\")]+)", src.group(1))
+    assert url, f"no url() in src: {src.group(1)!r}"
+
+    # The path is relative to the stylesheet, which lives in /static/vendor/.
+    served = client.get(f"/static/vendor/{url.group(1)}")
+    assert served.status_code == 200, f"icon font 404s at {url.group(1)}"
+    assert served.data[:4] == b"wOF2", "icon font is not a valid woff2 file"
+
+
 def test_share_links_are_untouched(client):
     """Guards the fix above: the share sheet must keep its destinations."""
     html = client.get("/").data

@@ -45,21 +45,25 @@ def fetch(url: str) -> bytes:
 
 
 def vendor_tabler() -> None:
+    """Download the icon CSS and its woff2, rewriting src to point locally.
+
+    The whole src: descriptor is rebuilt rather than edited. Stripping the
+    unwanted woff/ttf/eot entries with a regex is how this broke the first
+    time: '\\.woff' also matches inside '.woff2', so the one format we
+    actually keep got deleted and every icon rendered as an empty box.
+    """
     VENDOR_FONTS.mkdir(parents=True, exist_ok=True)
     css = fetch(f"{TABLER_BASE}/dist/tabler-icons.min.css").decode("utf-8")
 
-    # The CSS references its font files by relative path; download each one
-    # and rewrite the url() to point at our own folder.
-    for ref in sorted(set(re.findall(r"url\(['\"]?([^'\")?#]+)", css))):
-        name = Path(ref).name
-        # woff2 alone covers every browser Telegram runs on.
-        if not name.endswith(".woff2"):
-            continue
-        (VENDOR_FONTS / name).write_bytes(fetch(f"{TABLER_BASE}/dist/fonts/{name}"))
-        css = css.replace(ref, f"fonts/{name}")
+    # woff2 alone covers every browser Telegram runs on.
+    name = "tabler-icons.woff2"
+    (VENDOR_FONTS / name).write_bytes(fetch(f"{TABLER_BASE}/dist/fonts/{name}"))
 
-    # Drop now-dead references to formats we did not download.
-    css = re.sub(r",?\s*url\([^)]*\.(woff|ttf|eot)[^)]*\)\s*format\([^)]*\)", "", css)
+    src = f"src:url('fonts/{name}') format('woff2')"
+    css, count = re.subn(r"src:[^;}]*", src, css, count=1)
+    if count != 1:
+        sys.exit("Could not find the src: descriptor in the Tabler CSS.")
+
     (VENDOR / "tabler-icons.min.css").write_text(css, encoding="utf-8")
     print(f"  wrote {VENDOR / 'tabler-icons.min.css'}")
 
