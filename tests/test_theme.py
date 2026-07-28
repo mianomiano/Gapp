@@ -68,3 +68,56 @@ def test_theme_block_comes_after_the_main_stylesheet(client):
     db.set_setting("accent_color", "#ff0066")
     html = client.get("/").data.decode("utf-8")
     assert html.index("--green: #ff0066") > html.index("--bg-page")
+
+
+import io
+
+
+def test_admin_can_save_theme_settings(admin_client):
+    resp = admin_client.post("/api/admin/settings", data={
+        "accent_color": "#ff0066",
+        "cell_radius": "6",
+    })
+    assert resp.status_code == 200
+    import database as db
+    settings = db.get_settings()
+    assert settings["accent_color"] == "#ff0066"
+    assert settings["cell_radius"] == "6"
+
+
+def test_font_upload_is_stored(admin_client):
+    resp = admin_client.post("/api/admin/settings", data={
+        "font_display_file": (io.BytesIO(b"fake-font-bytes"), "MyFont.woff2"),
+    }, content_type="multipart/form-data")
+    assert resp.status_code == 200
+    import database as db
+    stored = db.get_settings()["font_display"]
+    assert stored.endswith(".woff2")
+    import theme
+    assert theme.FONT_FILE.match(stored), f"stored name is unusable: {stored}"
+
+
+def test_font_upload_rejects_non_font_files(admin_client):
+    resp = admin_client.post("/api/admin/settings", data={
+        "font_display_file": (io.BytesIO(b"<script>"), "evil.html"),
+    }, content_type="multipart/form-data")
+    assert resp.status_code == 400
+    import database as db
+    assert not db.get_settings().get("font_display")
+
+
+def test_theme_settings_require_admin(client):
+    assert client.post("/api/admin/settings",
+                       data={"accent_color": "#fff"}).status_code == 401
+
+
+def test_font_upload_stays_inside_the_test_directory(admin_client, tmp_path):
+    """Regression: the upload used to write into the real static/fonts."""
+    admin_client.post("/api/admin/settings", data={
+        "font_display_file": (io.BytesIO(b"stub"), "Probe.woff2"),
+    }, content_type="multipart/form-data")
+
+    import app as app_module
+    written = list(app_module.FONTS_DIR.glob("Probe_*.woff2"))
+    assert written, "upload did not land in the patched directory"
+    assert str(tmp_path) in str(written[0])

@@ -25,12 +25,19 @@ def temp_db(tmp_path, monkeypatch):
 
 @pytest.fixture
 def app(temp_db, tmp_path, monkeypatch):
-    """The Flask app, wired to the temp DB and a temp media directory."""
+    """The Flask app, wired to the temp DB and temp upload directories.
+
+    Every directory the app writes to must be redirected here. Missing one
+    means tests litter the real project: the font-upload tests dropped stub
+    .woff2 files into static/fonts before FONTS_DIR was added below.
+    """
     import app as app_module
 
-    media = tmp_path / "media"
-    media.mkdir()
-    monkeypatch.setattr(app_module, "MEDIA_DIR", media)
+    for attr, name in (("MEDIA_DIR", "media"), ("FONTS_DIR", "fonts")):
+        target = tmp_path / name
+        target.mkdir()
+        monkeypatch.setattr(app_module, attr, target)
+
     app_module.app.config.update(TESTING=True, SECRET_KEY="test-key")
     return app_module.app
 

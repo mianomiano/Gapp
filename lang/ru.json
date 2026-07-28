@@ -156,5 +156,18 @@
   "admin.language": "Язык",
   "admin.language_help": "Применяется и к галерее, и к этой админке.",
   "admin.current": "Текущее:",
-  "admin.no_intro": "Видео заставки не задано."
+  "admin.no_intro": "Видео заставки не задано.",
+  "admin.tab_appearance": "Оформление",
+  "admin.colors": "Цвета",
+  "admin.colors_help": "Применяется к галерее. Кнопка сброса возвращает исходное оформление.",
+  "admin.accent_color": "Акцент",
+  "admin.bg_page": "Фон страницы",
+  "admin.bg_base": "Фон панелей",
+  "admin.bg_raised": "Фон карточек",
+  "admin.cell_radius": "Скругление углов",
+  "admin.fonts": "Шрифты",
+  "admin.fonts_help": "woff2 — самый компактный формат. Загруженный шрифт заменяет встроенный везде, где он используется.",
+  "admin.font_display": "Заголовочный шрифт (заголовки, логотип)",
+  "admin.font_mono": "Шрифт интерфейса (подписи, кнопки)",
+  "admin.reset_defaults": "Сбросить оформление"
 }

@@ -156,5 +156,18 @@
   "admin.language": "Language",
   "admin.language_help": "Applies to both the gallery and this admin panel.",
   "admin.current": "Current:",
-  "admin.no_intro": "No intro video set."
+  "admin.no_intro": "No intro video set.",
+  "admin.tab_appearance": "Appearance",
+  "admin.colors": "Colours",
+  "admin.colors_help": "Applies to the gallery. Reset returns everything to the built-in look.",
+  "admin.accent_color": "Accent",
+  "admin.bg_page": "Page background",
+  "admin.bg_base": "Bar background",
+  "admin.bg_raised": "Card background",
+  "admin.cell_radius": "Corner radius",
+  "admin.fonts": "Fonts",
+  "admin.fonts_help": "woff2 is smallest. Uploading replaces the built-in font everywhere it is used.",
+  "admin.font_display": "Display font (headings, logo text)",
+  "admin.font_mono": "Interface font (labels, buttons)",
+  "admin.reset_defaults": "Reset to defaults"
 }

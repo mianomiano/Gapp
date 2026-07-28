@@ -37,6 +37,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent
 MEDIA_DIR = BASE_DIR / "static" / "media"
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+FONTS_DIR = BASE_DIR / "static" / "fonts"
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
@@ -45,6 +46,7 @@ PORT = int(os.environ.get("PORT", "5000"))
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 # Upload limits / whitelist.
+FONT_EXT = {"woff2", "woff", "otf", "ttf"}
 IMAGE_EXT = {"jpg", "jpeg", "png", "webp", "gif"}
 VIDEO_EXT = {"mp4", "webm", "mov"}
 ALLOWED_EXT = IMAGE_EXT | VIDEO_EXT
@@ -776,9 +778,26 @@ def admin_get_settings():
 def admin_set_settings():
     # Plain text fields.
     for key in ("logo_text", "about_text", "bot_username", "miniapp_name",
-                "contact_chat_id"):
+                "contact_chat_id") + theme.THEME_KEYS:
         if key in request.form:
             db.set_setting(key, request.form.get(key, "").strip())
+
+    # Font uploads. Separate field names from the settings keys, so the stored
+    # value stays the randomised filename we chose rather than anything the
+    # browser sent. theme.py revalidates it before building a url().
+    for field, setting in (("font_display_file", "font_display"),
+                           ("font_mono_file", "font_mono")):
+        upload = request.files.get(field)
+        if not upload or not upload.filename:
+            continue
+        extension = ext_of(upload.filename)
+        if extension not in FONT_EXT:
+            return jsonify({"error": f"Unsupported font type: .{extension}"}), 400
+        FONTS_DIR.mkdir(parents=True, exist_ok=True)
+        stem = re.sub(r"[^A-Za-z0-9_-]", "", Path(upload.filename).stem)[:40] or "font"
+        stored = f"{stem}_{secrets.token_hex(4)}.{extension}"
+        upload.save(FONTS_DIR / stored)
+        db.set_setting(setting, stored)
 
     # Language: only accept codes that have a file on disk, so a bad value
     # cannot leave the app rendering raw keys.

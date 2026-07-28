@@ -79,6 +79,9 @@
     .editbox[hidden] { display: none; }
     .editbox button { margin-right: 8px; }
     .item button { margin-top: 0; }
+    input[type=color].colorpick { width: 100%; height: 38px; padding: 2px;
+        background: #0c0c0e; border: 1px solid #2a2a30; cursor: pointer; }
+    input[type=range] { width: 100%; accent-color: #39e8a0; margin-top: 4px; }
     .cats-pick { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; }
     /* CSS content: cannot call t(), so the strings arrive as custom
        properties set from the translations (see :root below). */
@@ -211,6 +214,7 @@
     <button class="tab-btn" data-tab="posts">{{ t('admin.tab_posts') }}</button>
     <button class="tab-btn" data-tab="stats">{{ t('admin.tab_stats') }} <span class="stat-badge" id="statsTabBadge" hidden></span></button>
     <button class="tab-btn" data-tab="messages">{{ t('admin.tab_messages') }} <span class="tab-count" id="msgTabBadge" hidden></span></button>
+    <button class="tab-btn" data-tab="appearance">{{ t('admin.tab_appearance') }}</button>
     <button class="tab-btn" data-tab="settings">{{ t('admin.tab_settings') }}</button>
   </nav>
 
@@ -324,6 +328,57 @@
     <button id="messagesSeen" class="ghost">{{ t('admin.mark_all_read') }}</button>
   </div>
   </section><!-- /messages -->
+
+  <!-- ══ APPEARANCE TAB ══ -->
+  <section class="tab-panel" data-tab="appearance">
+
+  <h2>{{ t('admin.colors') }}</h2>
+  <div class="card">
+    <p class="muted">{{ t('admin.colors_help') }}</p>
+    <form id="appearanceForm" enctype="multipart/form-data">
+      <div class="row">
+        <div>
+          <label>{{ t('admin.accent_color') }}</label>
+          <input type="color" name="accent_color" id="accent_color" class="colorpick" />
+        </div>
+        <div>
+          <label>{{ t('admin.bg_page') }}</label>
+          <input type="color" name="bg_page" id="bg_page" class="colorpick" />
+        </div>
+        <div>
+          <label>{{ t('admin.bg_base') }}</label>
+          <input type="color" name="bg_base" id="bg_base" class="colorpick" />
+        </div>
+        <div>
+          <label>{{ t('admin.bg_raised') }}</label>
+          <input type="color" name="bg_raised" id="bg_raised" class="colorpick" />
+        </div>
+      </div>
+
+      <label>{{ t('admin.cell_radius') }} — <output id="cell_radius_out"></output></label>
+      <input type="range" name="cell_radius" id="cell_radius" min="0" max="12" step="1" />
+
+      <h2 style="margin-top:22px">{{ t('admin.fonts') }}</h2>
+      <p class="muted">{{ t('admin.fonts_help') }}</p>
+      <div class="row">
+        <div>
+          <label>{{ t('admin.font_display') }}</label>
+          <input type="file" name="font_display_file" accept=".woff2,.woff,.otf,.ttf" />
+          <span class="muted" id="font_display_current"></span>
+        </div>
+        <div>
+          <label>{{ t('admin.font_mono') }}</label>
+          <input type="file" name="font_mono_file" accept=".woff2,.woff,.otf,.ttf" />
+          <span class="muted" id="font_mono_current"></span>
+        </div>
+      </div>
+
+      <button type="submit">{{ t('admin.save') }}</button>
+      <button type="button" class="ghost" id="appearanceReset">{{ t('admin.reset_defaults') }}</button>
+    </form>
+  </div>
+
+  </section><!-- /appearance -->
 
   <!-- ══ SETTINGS TAB ══ -->
   <section class="tab-panel" data-tab="settings">
@@ -711,6 +766,7 @@
       document.getElementById('splashCurrent').textContent =
         s.splash_filename ? T('admin.current') + ' ' + s.splash_filename
                           : T('admin.no_intro');
+      loadAppearance(s);
     }
     function settingsSubmit(formId, opts) {
       document.getElementById(formId).addEventListener('submit', async e => {
@@ -731,6 +787,49 @@
     settingsSubmit('splashForm');
     settingsSubmit('contactForm');
     settingsSubmit('languageForm', { reload: true });
+
+    /* ── Appearance ── */
+    /* The gallery's own token values, used when nothing has been chosen yet
+       so the pickers open showing the real current colour rather than black. */
+    const THEME_DEFAULTS = {
+      accent_color: '#39e8a0',
+      bg_page:      '#0a0a0a',
+      bg_base:      '#111114',
+      bg_raised:    '#141417',
+      cell_radius:  '0',
+    };
+
+    function loadAppearance(s) {
+      for (const [key, fallback] of Object.entries(THEME_DEFAULTS)) {
+        const el = document.getElementById(key);
+        if (el) el.value = s[key] || fallback;
+      }
+      document.getElementById('cell_radius_out').textContent =
+        (s.cell_radius || THEME_DEFAULTS.cell_radius) + 'px';
+      for (const key of ['font_display', 'font_mono']) {
+        document.getElementById(key + '_current').textContent =
+          s[key] ? T('admin.current') + ' ' + s[key] : '';
+      }
+    }
+
+    document.getElementById('cell_radius').addEventListener('input', e => {
+      document.getElementById('cell_radius_out').textContent = e.target.value + 'px';
+    });
+
+    /* Clearing the stored values falls the app back to its built-in tokens. */
+    document.getElementById('appearanceReset').addEventListener('click', async () => {
+      const body = new FormData();
+      for (const key of ['accent_color', 'bg_page', 'bg_base', 'bg_raised',
+                         'cell_radius', 'font_display', 'font_mono']) {
+        body.append(key, '');
+      }
+      const res = await fetch('/api/admin/settings', { method: 'POST', body });
+      if (!res.ok) return onApiError(res);
+      toast(T('admin.saved'));
+      location.reload();
+    });
+
+    settingsSubmit('appearanceForm', { reload: true });
 
     /* ── Categories ── */
     let CATEGORIES = [];
