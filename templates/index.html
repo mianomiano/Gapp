@@ -8,47 +8,30 @@
   <!-- Telegram Mini App SDK — required for window.Telegram.WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Fallback web fonts (replaced by custom fonts below when available) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
-
   <style>
     /* ============================================================
        CUSTOM FONTS
-       Place your .woff2 / .otf / .ttf files in /static/fonts/
-       and uncomment + fill in the src paths below.
-       The CSS variables --font-display and --font-mono reference
-       these throughout the file — change them once here, done.
+       Self-hosted so the app needs no CDN — Google Fonts is unreliable
+       from some regions. Regenerate with: python tools/vendor_assets.py
+       A font uploaded in the admin panel re-declares these same two
+       families later in the document and wins.
     ============================================================ */
 
-    /*
     @font-face {
-      font-family: 'GeroinzoDisplay';
-      src: url('/static/fonts/YOUR_DISPLAY_FONT.woff2') format('woff2'),
-           url('/static/fonts/YOUR_DISPLAY_FONT.otf') format('opentype');
+      font-family: 'AppDisplay';
+      src: url('/static/fonts/SpaceGrotesk-var.woff2') format('woff2');
       font-weight: 400 700;
       font-style: normal;
-      font-display: block;
+      font-display: swap;
     }
 
     @font-face {
-      font-family: 'GeroinzoMono';
-      src: url('/static/fonts/YOUR_MONO_FONT.woff2') format('woff2'),
-           url('/static/fonts/YOUR_MONO_FONT.otf') format('opentype');
+      font-family: 'AppMono';
+      src: url('/static/fonts/ShareTechMono-400.woff2') format('woff2');
       font-weight: 400;
       font-style: normal;
-      font-display: block;
+      font-display: swap;
     }
-
-    @font-face {
-      font-family: 'GeroinzoStamp';
-      src: url('/static/fonts/YOUR_STAMP_FONT.woff2') format('woff2');
-      font-weight: 400;
-      font-style: normal;
-      font-display: block;
-    }
-    */
 
     /* ============================================================
        DESIGN TOKENS
@@ -85,9 +68,9 @@
       /* Fallbacks include Cyrillic-capable system fonts so Russian text renders
          cleanly even before a custom font is dropped in (Space Grotesk / Share
          Tech Mono have no Cyrillic, so those glyphs fall through to these). */
-      --font-display:  'Space Grotesk', system-ui, 'Segoe UI', Roboto, Arial, sans-serif;  /* swap to GeroinzoDisplay */
-      --font-mono:     'Share Tech Mono', ui-monospace, 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace;  /* swap to GeroinzoMono  */
-      --font-stamp:    'Share Tech Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;  /* swap to GeroinzoStamp */
+      --font-display:  'AppDisplay', system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+      --font-mono:     'AppMono', ui-monospace, 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace;
+      --font-stamp:    'AppMono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
 
       /* Layout */
       --wall-gap:   3px;
