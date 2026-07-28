@@ -34,10 +34,23 @@ def lookup(lang: str, key: str) -> str:
     return translations(lang).get(key, key)
 
 
+# Shown in the language picker. A language name is conventionally written in
+# its own language, so these are never translated.
+NATIVE_NAMES = {
+    "en": "English",
+    "ru": "Русский",
+}
+
+
 @lru_cache(maxsize=1)
 def available() -> tuple:
     """Language codes that actually have a file on disk."""
     return tuple(sorted(p.stem for p in LANG_DIR.glob("*.json")))
+
+
+def choices() -> list:
+    """(code, native name) for every language present, for the admin picker."""
+    return [(code, NATIVE_NAMES.get(code, code.upper())) for code in available()]
 
 
 def current_language() -> str:

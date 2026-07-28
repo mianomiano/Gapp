@@ -152,5 +152,9 @@
   "admin.min_stars_short": "Min stars",
   "admin.post": "Post",
   "admin.no_categories_hint": "No categories yet — add some below.",
-  "admin.long_read_hint": "The long read…"
+  "admin.long_read_hint": "The long read…",
+  "admin.language": "Language",
+  "admin.language_help": "Applies to both the gallery and this admin panel.",
+  "admin.current": "Current:",
+  "admin.no_intro": "No intro video set."
 }

@@ -93,6 +93,7 @@ def inject_globals():
         "t": lambda key: strings.get(key, key),
         "i18n_app_json": subset("nav.", "app.", "share."),
         "i18n_admin_json": subset("admin."),
+        "languages": i18n.choices(),
     }
 
 
@@ -776,6 +777,13 @@ def admin_set_settings():
                 "contact_chat_id"):
         if key in request.form:
             db.set_setting(key, request.form.get(key, "").strip())
+
+    # Language: only accept codes that have a file on disk, so a bad value
+    # cannot leave the app rendering raw keys.
+    if "language" in request.form:
+        code = request.form.get("language", "").strip().lower()
+        if code in i18n.available():
+            db.set_setting("language", code)
 
     # Splash on/off checkbox.
     if "splash_enabled" in request.form:

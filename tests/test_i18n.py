@@ -154,3 +154,64 @@ def test_admin_css_has_no_hardcoded_ui_text():
 def test_index_css_has_no_hardcoded_ui_text():
     leftover = _css_hardcoded(TEMPLATES / "index.html")
     assert leftover == [], f"Not yet translated (in CSS): {leftover}"
+
+
+def test_russian_covers_every_english_key():
+    en, ru = i18n.translations("en"), i18n.translations("ru")
+    missing = sorted(set(en) - set(ru))
+    assert missing == [], f"Untranslated keys: {missing}"
+
+
+def test_russian_has_no_extra_keys():
+    """An extra key is almost always a typo in one of the two files."""
+    en, ru = i18n.translations("en"), i18n.translations("ru")
+    extra = sorted(set(ru) - set(en))
+    assert extra == [], f"Keys not in en.json: {extra}"
+
+
+def test_russian_is_actually_translated():
+    """Guards against a file that was copied but never translated."""
+    ru = i18n.translations("ru")
+    cyrillic = [v for v in ru.values() if any("Ѐ" <= c <= "ӿ" for c in v)]
+    assert len(cyrillic) > len(ru) * 0.75
+
+
+def test_translations_keep_their_inline_markup():
+    """Help strings carry <b>/<span> that is rendered with | safe. A
+    translation that drops or mangles a tag would render broken markup."""
+    en, ru = i18n.translations("en"), i18n.translations("ru")
+    for key, english in en.items():
+        if "<" not in english:
+            continue
+        en_tags = sorted(re.findall(r"</?(\w+)", english))
+        ru_tags = sorted(re.findall(r"</?(\w+)", ru[key]))
+        assert en_tags == ru_tags, f"{key}: tags differ ({en_tags} vs {ru_tags})"
+
+
+def test_admin_can_set_the_language(admin_client):
+    resp = admin_client.post("/api/admin/settings", data={"language": "ru"})
+    assert resp.status_code == 200
+    import database as db
+    assert db.get_settings()["language"] == "ru"
+
+
+def test_admin_rejects_an_unavailable_language(admin_client):
+    """A bad code must not get stored, or the app renders raw keys."""
+    admin_client.post("/api/admin/settings", data={"language": "klingon"})
+    import database as db
+    assert db.get_settings().get("language", "") != "klingon"
+
+
+def test_language_choices_cover_every_file():
+    codes = [code for code, _ in i18n.choices()]
+    assert codes == list(i18n.available())
+    assert dict(i18n.choices())["ru"] == "Русский"
+
+
+def test_switching_language_changes_the_rendered_page(client):
+    import database as db
+    english = client.get("/").data
+    db.set_setting("language", "ru")
+    russian = client.get("/").data
+    assert english != russian
+    assert "Стена".encode() in russian
