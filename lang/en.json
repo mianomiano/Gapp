@@ -1,7 +1,47 @@
 {
+  "nav.aria": "Main navigation",
   "nav.wall": "Wall",
   "nav.posts": "Posts",
   "nav.video": "Video",
   "nav.photo": "Photo",
-  "nav.about": "About"
+  "nav.about": "About",
+
+  "app.search": "Search",
+  "app.search_placeholder": "Search works…",
+  "app.full_screen": "Full screen",
+  "app.skip": "Skip",
+  "app.back": "Back",
+  "app.close": "Close",
+  "app.like": "Like",
+  "app.expanded_view": "Expanded view",
+  "app.links": "Links",
+  "app.video_badge": "Vid",
+
+  "app.share": "Share",
+  "app.share_via": "Share via",
+  "app.forward": "Forward",
+  "app.forward_to_contact": "Forward to a contact",
+  "app.copy_link": "Copy link",
+  "app.link_copied": "Link copied",
+
+  "app.send_stars": "Send Stars",
+  "app.unlock": "Unlock",
+  "app.invoice_failed": "Could not create invoice.",
+  "app.invoice_unreachable": "Could not reach the server for the invoice.",
+  "app.open_in_telegram": "Open this inside Telegram to pay with Stars.",
+
+  "app.no_files": "No files yet · add media in /admin",
+  "app.no_posts": "No posts yet · add them in /admin",
+  "app.back_to_posts": "Back to posts",
+
+  "app.contact_cta": "Job / Advertising — get in touch",
+  "app.contact_placeholder": "Your message — a job, an ad, a question…",
+  "app.send_message": "Send message",
+  "app.message_sent": "Sent — thank you! The owner will get back to you.",
+  "app.message_failed": "Could not send. Please try again.",
+
+  "share.whatsapp": "WhatsApp",
+  "share.x": "X",
+  "share.telegram": "Telegram",
+  "share.instagram": "Instagram"
 }

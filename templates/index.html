@@ -1150,7 +1150,7 @@
      plays once (any length) then reveals the app. Hidden unless configured. -->
 <div class="splash is-hidden" id="splash">
   <video id="splashVideo" muted playsinline autoplay preload="auto"></video>
-  <div class="splash-skip" id="splashSkip">Skip</div>
+  <div class="splash-skip" id="splashSkip">{{ t('app.skip') }}</div>
 </div>
 
 <div class="app">
@@ -1161,12 +1161,12 @@
   <!-- Share sheet — pick a network to share the current work. -->
   <div class="share-sheet is-hidden" id="shareSheet">
     <div class="share-sheet-inner">
-      <div class="share-sheet-title mono">Share via</div>
-      <button class="share-opt" data-share="whatsapp"><i class="ti ti-brand-whatsapp"></i><span>WhatsApp</span></button>
-      <button class="share-opt" data-share="x"><i class="ti ti-brand-x"></i><span>X</span></button>
-      <button class="share-opt" data-share="telegram"><i class="ti ti-brand-telegram"></i><span>Telegram</span></button>
-      <button class="share-opt" data-share="instagram"><i class="ti ti-brand-instagram"></i><span>Instagram</span></button>
-      <button class="share-opt" data-share="copy"><i class="ti ti-link"></i><span>Copy link</span></button>
+      <div class="share-sheet-title mono">{{ t('app.share_via') }}</div>
+      <button class="share-opt" data-share="whatsapp"><i class="ti ti-brand-whatsapp"></i><span>{{ t('share.whatsapp') }}</span></button>
+      <button class="share-opt" data-share="x"><i class="ti ti-brand-x"></i><span>{{ t('share.x') }}</span></button>
+      <button class="share-opt" data-share="telegram"><i class="ti ti-brand-telegram"></i><span>{{ t('share.telegram') }}</span></button>
+      <button class="share-opt" data-share="instagram"><i class="ti ti-brand-instagram"></i><span>{{ t('share.instagram') }}</span></button>
+      <button class="share-opt" data-share="copy"><i class="ti ti-link"></i><span>{{ t('app.copy_link') }}</span></button>
     </div>
   </div>
 
@@ -1186,11 +1186,11 @@
         <div class="topbar-actions">
           <!-- Social icons chosen in admin ("show in header") -->
           <div class="header-social" id="headerSocial"></div>
-          <button class="hdr-icon-btn" id="searchBtn" aria-label="Search">
+          <button class="hdr-icon-btn" id="searchBtn" aria-label="{{ t('app.search') }}">
             <i class="ti ti-search"></i>
           </button>
-          <button class="fs-btn" id="fullscreenBtn" aria-label="Full screen">
-            <i class="ti ti-maximize"></i><span>Full screen</span>
+          <button class="fs-btn" id="fullscreenBtn" aria-label="{{ t('app.full_screen') }}">
+            <i class="ti ti-maximize"></i><span>{{ t('app.full_screen') }}</span>
           </button>
         </div>
       </div>
@@ -1218,7 +1218,7 @@
     <div class="wall" id="wall"></div>
 
     <!-- Empty-state note when no media has been added yet -->
-    <div class="empty-note is-hidden" id="emptyNote">No files yet · add media in /admin</div>
+    <div class="empty-note is-hidden" id="emptyNote">{{ t('app.no_files') }}</div>
 
     <!-- ── ABOUT VIEW ── shown when the About nav item is active -->
     <div class="about-view is-hidden" id="aboutView">
@@ -1226,17 +1226,17 @@
       <div class="about-text" id="aboutText"></div>
       <div class="raw-divider" style="margin-left:0;margin-right:0">
         <div class="raw-divider-line"></div>
-        <span class="raw-divider-text">Links</span>
+        <span class="raw-divider-text">{{ t('app.links') }}</span>
         <div class="raw-divider-line"></div>
       </div>
       <div class="social-list" id="socialList"></div>
 
       <!-- Job / advertising — tap to write a direct message to the owner. -->
       <div class="about-contact">
-        <button class="contact-toggle" id="contactToggle">Job / Advertising — get in touch</button>
+        <button class="contact-toggle" id="contactToggle">{{ t('app.contact_cta') }}</button>
         <div class="contact-form is-hidden" id="contactForm">
-          <textarea id="contactInput" placeholder="Your message — a job, an ad, a question…"></textarea>
-          <button class="contact-send" id="contactSend">Send message</button>
+          <textarea id="contactInput" placeholder="{{ t('app.contact_placeholder') }}"></textarea>
+          <button class="contact-send" id="contactSend">{{ t('app.send_message') }}</button>
           <div class="contact-note" id="contactNote"></div>
         </div>
       </div>
@@ -1251,7 +1251,7 @@
     <!-- DIVIDER -->
     <div class="raw-divider is-hidden" id="expDivider">
       <div class="raw-divider-line"></div>
-      <span class="raw-divider-text">Expanded view</span>
+      <span class="raw-divider-text">{{ t('app.expanded_view') }}</span>
       <div class="raw-divider-line"></div>
     </div>
 
@@ -1265,7 +1265,7 @@
       <div class="exp-image" id="expImage">
         <!-- Ghost type background (decorative) -->
         <div class="exp-image-ghost" id="expGhost">
-          <span class="ghost-type" style="font-size:72px;color:rgba(57,232,160,0.08)">WHO<br>NEEDS</span>
+          <span class="ghost-type" style="font-size:72px;color:rgba(57,232,160,0.08)"></span>
         </div>
 
         <!--
@@ -1281,41 +1281,39 @@
 
         <!-- Top-right controls -->
         <div class="exp-image-actions">
-          <button class="icon-btn" id="btnBack" aria-label="Back">
+          <button class="icon-btn" id="btnBack" aria-label="{{ t('app.back') }}">
             <i class="ti ti-arrow-left"></i>
           </button>
-          <button class="icon-btn" id="btnClose" aria-label="Close">
+          <button class="icon-btn" id="btnClose" aria-label="{{ t('app.close') }}">
             <i class="ti ti-x"></i>
           </button>
         </div>
 
         <!-- Date stamp -->
-        <div class="exp-date" id="expDate">11 · 06 · 26</div>
+        <div class="exp-date" id="expDate"></div>
       </div>
 
       <div class="exp-body">
 
         <div class="exp-title-row">
           <div>
-            <div class="exp-title" id="expTitle">Who Needs a Sober View?</div>
+            <!-- Filled by openItem() from the opened media item. -->
+            <div class="exp-title" id="expTitle"></div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
-            <span class="exp-meta" id="expYear">2024</span>
+            <span class="exp-meta" id="expYear"></span>
           </div>
         </div>
 
-        <div class="exp-meta" id="expDesc">
-          A TRIP BEYOND SIGHT &amp; MIND<br>
-          MANUFACTURED UNDER THE INFLUENCE
-        </div>
+        <div class="exp-meta" id="expDesc"></div>
 
         <!-- Action bar -->
         <div class="exp-actions">
 
           <!-- Like button — toggle liked state in JS -->
-          <button class="like-btn" id="likeBtn" aria-label="Like">
+          <button class="like-btn" id="likeBtn" aria-label="{{ t('app.like') }}">
             <i class="ti ti-heart"></i>
-            <span id="likeCount">312</span>
+            <span id="likeCount">0</span>
           </button>
 
           <!--
@@ -1324,23 +1322,23 @@
             The invoice URL must be generated server-side via Bot API
             createInvoiceLink with XTR (Telegram Stars) currency.
           -->
-          <button class="star-btn" id="starBtn" aria-label="Send stars">
+          <button class="star-btn" id="starBtn" aria-label="{{ t('app.send_stars') }}">
             <i class="ti ti-star"></i>
-            <span>Send Stars</span>
+            <span>{{ t('app.send_stars') }}</span>
           </button>
 
         </div>
 
         <!-- Forward / copy / share — under the pay button -->
         <div class="exp-share">
-          <button class="share-btn" id="forwardBtn" aria-label="Forward to a contact">
-            <i class="ti ti-send"></i><span>Forward</span>
+          <button class="share-btn" id="forwardBtn" aria-label="{{ t('app.forward_to_contact') }}">
+            <i class="ti ti-send"></i><span>{{ t('app.forward') }}</span>
           </button>
-          <button class="share-btn" id="copyLinkBtn" aria-label="Copy link">
-            <i class="ti ti-link"></i><span>Copy link</span>
+          <button class="share-btn" id="copyLinkBtn" aria-label="{{ t('app.copy_link') }}">
+            <i class="ti ti-link"></i><span>{{ t('app.copy_link') }}</span>
           </button>
-          <button class="share-btn" id="shareBtn" aria-label="Share">
-            <i class="ti ti-share"></i><span>Share</span>
+          <button class="share-btn" id="shareBtn" aria-label="{{ t('app.share') }}">
+            <i class="ti ti-share"></i><span>{{ t('app.share') }}</span>
           </button>
         </div>
 
@@ -1352,26 +1350,26 @@
   <!-- /scroll-area -->
 
   <!-- ── BOTTOM NAV ── -->
-  <nav class="bottom-nav" aria-label="Main navigation">
-    <button class="bnav-item active" data-view="wall" style="--c:#39E8A0" aria-label="Wall">
+  <nav class="bottom-nav" aria-label="{{ t('nav.aria') }}">
+    <button class="bnav-item active" data-view="wall" style="--c:#39E8A0" aria-label="{{ t('nav.wall') }}">
       <i class="ti ti-layout-grid"></i>
-      <span>Wall</span>
+      <span>{{ t('nav.wall') }}</span>
     </button>
-    <button class="bnav-item" data-view="posts" style="--c:#FFB020" aria-label="Posts">
+    <button class="bnav-item" data-view="posts" style="--c:#FFB020" aria-label="{{ t('nav.posts') }}">
       <i class="ti ti-article"></i>
-      <span>Posts</span>
+      <span>{{ t('nav.posts') }}</span>
     </button>
-    <button class="bnav-item" data-view="video" style="--c:#FF4D4D" aria-label="Video">
+    <button class="bnav-item" data-view="video" style="--c:#FF4D4D" aria-label="{{ t('nav.video') }}">
       <i class="ti ti-player-play"></i>
-      <span>Video</span>
+      <span>{{ t('nav.video') }}</span>
     </button>
-    <button class="bnav-item" data-view="photo" style="--c:#2AABEE" aria-label="Photo">
+    <button class="bnav-item" data-view="photo" style="--c:#2AABEE" aria-label="{{ t('nav.photo') }}">
       <i class="ti ti-photo"></i>
-      <span>Photo</span>
+      <span>{{ t('nav.photo') }}</span>
     </button>
-    <button class="bnav-item" data-view="about" style="--c:#B66BFF" aria-label="About">
+    <button class="bnav-item" data-view="about" style="--c:#B66BFF" aria-label="{{ t('nav.about') }}">
       <i class="ti ti-info-circle"></i>
-      <span>About</span>
+      <span>{{ t('nav.about') }}</span>
     </button>
   </nav>
 
@@ -1494,7 +1492,8 @@
       label.insertAdjacentHTML('beforeend',
         `<span class="stamp stamp-red">${m.minStars}★</span>`);
     } else if (m.type === 'video') {
-      label.insertAdjacentHTML('beforeend', '<span class="stamp stamp-green">Vid</span>');
+      label.insertAdjacentHTML('beforeend',
+        `<span class="stamp stamp-green">${T('app.video_badge')}</span>`);
     }
     cell.appendChild(label);
 
@@ -1586,7 +1585,9 @@
     likeBtn.classList.toggle('liked', !!m.liked);
 
     /* Stars button reflects donate vs unlock */
-    starLabel.textContent = locked ? `Unlock · ${m.minStars}★` : 'Send Stars';
+    starLabel.textContent = locked
+      ? `${T('app.unlock')} · ${m.minStars}★`
+      : T('app.send_stars');
 
     /* Inject media (locked items stay hidden behind the ghost type) */
     expMedia.innerHTML = '';
@@ -1690,15 +1691,15 @@
         body: JSON.stringify({ mediaId: currentId, uid: UID }),
       });
       const data = await res.json();
-      if (!res.ok) { alert(data.error || 'Could not create invoice.'); return; }
+      if (!res.ok) { alert(data.error || T('app.invoice_failed')); return; }
       invoiceUrl = data.invoiceUrl;
     } catch (err) {
-      alert('Could not reach the server for the invoice.');
+      alert(T('app.invoice_unreachable'));
       return;
     }
 
     if (!tg?.openInvoice) {
-      alert('Open this inside Telegram to pay with Stars.\nInvoice: ' + invoiceUrl);
+      alert(T('app.open_in_telegram') + '\n' + invoiceUrl);
       return;
     }
     const paidId = currentId;
@@ -1938,7 +1939,7 @@
     catch (err) { /* ignore */ }
     postsView.innerHTML = '';
     if (!posts.length) {
-      postsView.innerHTML = '<div class="empty-note">No posts yet · add them in /admin</div>';
+      postsView.innerHTML = '<div class="empty-note">' + T('app.no_posts') + '</div>';
       return;
     }
     posts.forEach(p => {
@@ -1986,7 +1987,7 @@
 
     const back = document.createElement('button');
     back.className = 'post-reader-back';
-    back.innerHTML = '<i class="ti ti-arrow-left"></i> Back to posts';
+    back.innerHTML = '<i class="ti ti-arrow-left"></i> ' + T('app.back_to_posts');
     back.addEventListener('click', showPosts);
     postReader.appendChild(back);
 
@@ -2033,11 +2034,16 @@
     const actions = document.createElement('div');
     actions.className = 'post-actions';
     actions.innerHTML =
-      `<button class="like-btn ${post.liked ? 'liked' : ''}" id="postLikeBtn">
+      `<button class="like-btn ${post.liked ? 'liked' : ''}" id="postLikeBtn"
+               aria-label="${T('app.like')}">
          <i class="ti ti-heart"></i><span id="postLikeCount">${post.likes}</span>
        </button>
-       <button class="star-btn" id="postStarBtn"><i class="ti ti-star"></i><span>Send Stars</span></button>
-       <button class="icon-btn" id="postShareBtn" aria-label="Share"><i class="ti ti-share"></i></button>`;
+       <button class="star-btn" id="postStarBtn" aria-label="${T('app.send_stars')}">
+         <i class="ti ti-star"></i><span>${T('app.send_stars')}</span>
+       </button>
+       <button class="icon-btn" id="postShareBtn" aria-label="${T('app.share')}">
+         <i class="ti ti-share"></i>
+       </button>`;
     postReader.appendChild(actions);
 
     postsView.classList.add('is-hidden');
@@ -2083,11 +2089,11 @@
           body: JSON.stringify({ postId: currentPost.id, uid: UID }),
         });
         const data = await res.json();
-        if (!res.ok) { alert(data.error || 'Could not create invoice.'); return; }
+        if (!res.ok) { alert(data.error || T('app.invoice_failed')); return; }
         invoiceUrl = data.invoiceUrl;
-      } catch (err) { alert('Could not reach the server for the invoice.'); return; }
+      } catch (err) { alert(T('app.invoice_unreachable')); return; }
       if (tg?.openInvoice) tg.openInvoice(invoiceUrl, () => {});
-      else alert('Open this inside Telegram to pay with Stars.');
+      else alert(T('app.open_in_telegram'));
     }
   });
 
@@ -2209,13 +2215,13 @@
         });
         if (res.ok) {
           input.value = '';
-          note.textContent = 'Sent — thank you! The owner will get back to you.';
+          note.textContent = T('app.message_sent');
           form.classList.add('is-hidden');
         } else {
-          note.textContent = 'Could not send. Please try again.';
+          note.textContent = T('app.message_failed');
         }
       } catch (err) {
-        note.textContent = 'Could not send. Please try again.';
+        note.textContent = T('app.message_failed');
       }
       send.disabled = false;
     });
