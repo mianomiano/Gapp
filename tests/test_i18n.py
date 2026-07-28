@@ -63,12 +63,29 @@ def test_unavailable_language_setting_falls_back(temp_db):
     assert i18n.current_language() == "en"
 
 
+def _injected_dictionary(html: str) -> dict:
+    """The window.I18N object. Read to end of line rather than to the first
+    ';' — translations contain entities like &lt; whose semicolon would
+    truncate the JSON mid-string."""
+    start = html.index("window.I18N = ") + len("window.I18N = ")
+    line = html[start:html.index("\n", start)].rstrip().rstrip(";")
+    return json.loads(line)
+
+
 def test_index_exposes_translations_to_javascript(client):
     html = client.get("/").data.decode("utf-8")
-    assert "window.I18N" in html
-    start = html.index("window.I18N = ") + len("window.I18N = ")
-    end = html.index(";", start)
-    assert json.loads(html[start:end])["nav.wall"] == "Wall"
+    assert _injected_dictionary(html)["nav.wall"] == "Wall"
+
+
+def test_admin_exposes_translations_to_javascript(client):
+    html = client.get("/admin").data.decode("utf-8")
+    assert _injected_dictionary(html)["admin.save"] == "Save"
+
+
+def test_gallery_does_not_ship_admin_strings(client):
+    """The admin panel's ~110 strings are dead weight on every visitor."""
+    keys = _injected_dictionary(client.get("/").data.decode("utf-8"))
+    assert not [k for k in keys if k.startswith("admin.")]
 
 
 def test_html_lang_attribute_follows_the_setting(client):
@@ -103,3 +120,37 @@ def _js_hardcoded(path: Path):
 def test_index_javascript_has_no_hardcoded_ui_text():
     leftover = _js_hardcoded(TEMPLATES / "index.html")
     assert leftover == [], f"Not yet translated (in JS): {leftover}"
+
+
+def test_admin_has_no_hardcoded_ui_text():
+    leftover = _hardcoded_strings(TEMPLATES / "admin.html")
+    assert leftover == [], f"Not yet translated: {leftover}"
+
+
+def test_admin_javascript_has_no_hardcoded_ui_text():
+    leftover = _js_hardcoded(TEMPLATES / "admin.html")
+    assert leftover == [], f"Not yet translated (in JS): {leftover}"
+
+
+def _css_hardcoded(path: Path):
+    """User-visible text in CSS content:. Neither other scan sees these —
+    the markup scan strips <style> and the JS scan only reads <script>."""
+    css_blocks = re.findall(
+        r"(?s)<style\b[^>]*>(.*?)</style>", path.read_text(encoding="utf-8")
+    )
+    found = []
+    for css in css_blocks:
+        for text in re.findall(r"content:\s*'([^']{2,})'", css):
+            if re.search(r"[A-Za-z]{2}", text):
+                found.append(text)
+    return sorted(set(found))
+
+
+def test_admin_css_has_no_hardcoded_ui_text():
+    leftover = _css_hardcoded(TEMPLATES / "admin.html")
+    assert leftover == [], f"Not yet translated (in CSS): {leftover}"
+
+
+def test_index_css_has_no_hardcoded_ui_text():
+    leftover = _css_hardcoded(TEMPLATES / "index.html")
+    assert leftover == [], f"Not yet translated (in CSS): {leftover}"

@@ -1844,7 +1844,7 @@
   ============================================================ */
   /* UI strings for everything JavaScript sets at runtime. Same dictionary
      Jinja uses via t(), so markup and script can never drift apart. */
-  window.I18N = {{ i18n_json | safe }};
+  window.I18N = {{ i18n_app_json | safe }};
   window.T = function (key) { return window.I18N[key] || key; };
   const T = window.T;
 

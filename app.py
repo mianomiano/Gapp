@@ -77,12 +77,22 @@ def inject_globals():
     logo = (settings.get("logo_image") or "").strip()
     lang = i18n.current_language()
     strings = i18n.translations(lang)
+
+    def subset(*prefixes):
+        """Only the strings a given page's JavaScript can use. The gallery has
+        no reason to ship the admin panel's help text to every visitor."""
+        return json.dumps(
+            {k: v for k, v in strings.items() if k.startswith(prefixes)},
+            ensure_ascii=False,
+        )
+
     return {
         "brand": (settings.get("logo_text") or "").strip() or DEFAULT_BRAND,
         "brand_logo": f"/static/media/{logo}" if logo else "",
         "lang": lang,
         "t": lambda key: strings.get(key, key),
-        "i18n_json": json.dumps(strings, ensure_ascii=False),
+        "i18n_app_json": subset("nav.", "app.", "share."),
+        "i18n_admin_json": subset("admin."),
     }
 
 

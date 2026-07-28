@@ -1,13 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ brand }} — Admin</title>
   <link rel="stylesheet" href="/static/vendor/tabler-icons.min.css" />
+  <script>
+    /* Same dictionary Jinja uses via t(), for the strings JS builds. In the
+       head so the login screen gets it too, not just the dashboard. */
+    window.I18N = {{ i18n_admin_json | safe }};
+    window.T = function (key) { return window.I18N[key] || key; };
+  </script>
   <style>
     /* Admin panel has its OWN minimal styling — it is intentionally separate
        from the gallery's locked design. Functional, dark, no frills. */
+    :root {
+      --txt-no-cats:    {{ t('admin.no_categories_hint') | tojson }};
+      --txt-long-read:  {{ t('admin.long_read_hint') | tojson }};
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -70,7 +80,9 @@
     .editbox button { margin-right: 8px; }
     .item button { margin-top: 0; }
     .cats-pick { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; }
-    .cats-pick.empty::before { content: 'No categories yet — add some below.'; color: #7a7672; font-size: 12px; }
+    /* CSS content: cannot call t(), so the strings arrive as custom
+       properties set from the translations (see :root below). */
+    .cats-pick.empty::before { content: var(--txt-no-cats); color: #7a7672; font-size: 12px; }
     .cats-pick label { margin: 0; display: flex; align-items: center; gap: 6px;
                        text-transform: none; letter-spacing: 0; color: #e8e4dc; font-size: 13px; }
     .cats-pick input { width: auto; }
@@ -95,7 +107,7 @@
     .rte-emojis button { padding: 3px 5px; font-size: 15px; background: transparent; border: 0; }
     .rte-editor { min-height: 120px; padding: 10px 12px; font-family: inherit; font-size: 14px;
         line-height: 1.6; outline: none; }
-    .rte-editor:empty::before { content: 'The long read…'; color: #5a564f; }
+    .rte-editor:empty::before { content: var(--txt-long-read); color: #5a564f; }
     /* Restore list indent (global reset zeroes ul/ol padding -> markers escape the box). */
     .rte-editor ul, .rte-editor ol { padding-left: 1.6em; margin: 6px 0; }
     .rte-editor li { margin: 3px 0; }
@@ -165,11 +177,11 @@
   <!-- ── LOGIN ── -->
   <div class="login">
     <h1>{{ brand }} Admin</h1>
-    <p class="muted">Enter the admin password (set as ADMIN_PASSWORD in .env).</p>
+    <p class="muted">{{ t('admin.login_help') }}</p>
     <form id="loginForm">
-      <label>Password</label>
+      <label>{{ t('admin.password') }}</label>
       <input type="password" id="password" autocomplete="current-password" required />
-      <button type="submit">Log in</button>
+      <button type="submit">{{ t('admin.log_in') }}</button>
       <span class="muted" id="loginError"></span>
     </form>
   </div>
@@ -182,85 +194,86 @@
         body: JSON.stringify({ password: document.getElementById('password').value }),
       });
       if (res.ok) location.reload();
-      else document.getElementById('loginError').textContent = ' Wrong password.';
+      else document.getElementById('loginError').textContent =
+        ' ' + window.T('admin.wrong_password');
     });
   </script>
 
 {% else %}
   <!-- ── DASHBOARD ── -->
   <h1>{{ brand }} Admin</h1>
-  <p class="muted">Manage the gallery · <a href="/" target="_blank">view site ↗</a> ·
-    <a href="#" id="logout">log out</a></p>
+  <p class="muted">{{ t('admin.manage') }} · <a href="/" target="_blank">{{ t('admin.view_site') }} ↗</a> ·
+    <a href="#" id="logout">{{ t('admin.log_out') }}</a></p>
 
   <!-- TAB NAV -->
   <nav class="tab-nav" id="tabNav">
-    <button class="tab-btn active" data-tab="media">Media</button>
-    <button class="tab-btn" data-tab="posts">Posts</button>
-    <button class="tab-btn" data-tab="stats">Stats <span class="stat-badge" id="statsTabBadge" hidden></span></button>
-    <button class="tab-btn" data-tab="messages">Messages <span class="tab-count" id="msgTabBadge" hidden></span></button>
-    <button class="tab-btn" data-tab="settings">Settings</button>
+    <button class="tab-btn active" data-tab="media">{{ t('admin.tab_media') }}</button>
+    <button class="tab-btn" data-tab="posts">{{ t('admin.tab_posts') }}</button>
+    <button class="tab-btn" data-tab="stats">{{ t('admin.tab_stats') }} <span class="stat-badge" id="statsTabBadge" hidden></span></button>
+    <button class="tab-btn" data-tab="messages">{{ t('admin.tab_messages') }} <span class="tab-count" id="msgTabBadge" hidden></span></button>
+    <button class="tab-btn" data-tab="settings">{{ t('admin.tab_settings') }}</button>
   </nav>
 
   <!-- ══ MEDIA TAB ══ -->
   <section class="tab-panel active" data-tab="media">
 
   <!-- ADD MEDIA -->
-  <h2>Add media</h2>
+  <h2>{{ t('admin.add_media') }}</h2>
   <div class="card">
     <form id="addMediaForm">
-      <label>File (image or video)</label>
+      <label>{{ t('admin.file') }}</label>
       <input type="file" name="file" accept="image/*,video/*" required />
       <div class="row">
-        <div><label>Title</label><input type="text" name="title" /></div>
-        <div><label>Type</label>
+        <div><label>{{ t('admin.title') }}</label><input type="text" name="title" /></div>
+        <div><label>{{ t('admin.type') }}</label>
           <select name="type">
-            <option value="">Auto-detect</option>
-            <option value="photo">Photo</option>
-            <option value="video">Video</option>
+            <option value="">{{ t('admin.auto_detect') }}</option>
+            <option value="photo">{{ t('admin.photo') }}</option>
+            <option value="video">{{ t('admin.video') }}</option>
           </select>
         </div>
       </div>
-      <label>Description</label>
-      <textarea name="description" placeholder="Two lines look best"></textarea>
+      <label>{{ t('admin.description') }}</label>
+      <textarea name="description" placeholder="{{ t('admin.description_hint') }}"></textarea>
       <div class="row">
-        <div><label>Date label</label><input type="text" name="date_label" placeholder="18 · 10 · 24" /></div>
-        <div><label>Year</label><input type="text" name="year" placeholder="2024" /></div>
-        <div><label>Wall size</label>
+        <div><label>{{ t('admin.date_label') }}</label><input type="text" name="date_label" placeholder="18 · 10 · 24" /></div>
+        <div><label>{{ t('admin.year') }}</label><input type="text" name="year" placeholder="2024" /></div>
+        <div><label>{{ t('admin.wall_size') }}</label>
           <select name="size">
-            <option value="medium">Medium</option>
-            <option value="tall">Tall</option>
-            <option value="short">Short</option>
+            <option value="medium">{{ t('admin.size_medium') }}</option>
+            <option value="tall">{{ t('admin.size_tall') }}</option>
+            <option value="short">{{ t('admin.size_short') }}</option>
           </select>
         </div>
       </div>
       <div class="row">
         <div class="check">
           <input type="checkbox" id="is_locked" name="is_locked" value="1" />
-          <label for="is_locked">Lock — viewers pay Stars to see it</label>
+          <label for="is_locked">{{ t('admin.lock') }}</label>
         </div>
-        <div><label>Min stars (unlock / donation)</label>
+        <div><label>{{ t('admin.min_stars') }}</label>
           <input type="number" name="min_stars" value="1" min="1" /></div>
       </div>
-      <label>Categories (choose up to 3)</label>
+      <label>{{ t('admin.categories_max3') }}</label>
       <div id="addCats" class="cats-pick"></div>
-      <button type="submit">Add to wall</button>
+      <button type="submit">{{ t('admin.add_to_wall') }}</button>
     </form>
   </div>
 
   <!-- CATEGORIES -->
-  <h2>Categories</h2>
+  <h2>{{ t('admin.categories') }}</h2>
   <div class="card">
-    <p class="muted">Create the buttons shown across the top of the gallery. A post can belong to up to 3.</p>
+    <p class="muted">{{ t('admin.categories_help') }}</p>
     <form id="addCategoryForm">
-      <label>New category name</label>
-      <input type="text" name="name" placeholder="e.g. Posters" />
-      <button type="submit">Add category</button>
+      <label>{{ t('admin.new_category') }}</label>
+      <input type="text" name="name" placeholder="{{ t('admin.new_category_hint') }}" />
+      <button type="submit">{{ t('admin.add_category') }}</button>
     </form>
     <div id="categoryList" style="margin-top:12px"></div>
   </div>
 
   <!-- MEDIA LIST -->
-  <h2>Wall — drag to reorder</h2>
+  <h2>{{ t('admin.wall_reorder') }}</h2>
   <div id="mediaList"></div>
 
   </section><!-- /media -->
@@ -269,24 +282,23 @@
   <section class="tab-panel" data-tab="posts">
 
   <!-- POSTS -->
-  <h2>Posts (long reads)</h2>
+  <h2>{{ t('admin.posts_heading') }}</h2>
   <div class="card">
-    <p class="muted">An article with rich text, its own uploaded images (expanding gallery, up to 15)
-      and videos, categories, colored hashtags, plus like / stars / share.</p>
+    <p class="muted">{{ t('admin.posts_help') }}</p>
     <form id="addPostForm" enctype="multipart/form-data">
-      <label>Title</label>
+      <label>{{ t('admin.title') }}</label>
       <input type="text" name="title" />
-      <label>Body</label>
+      <label>{{ t('admin.body') }}</label>
       <div id="addBodyMount"></div>
-      <label>Categories</label>
+      <label>{{ t('admin.categories') }}</label>
       <div id="postAddCats" class="cats-pick"></div>
       <input type="hidden" name="category_ids_present" value="1">
       <div id="addHashMount"></div>
-      <label>Stars amount (support)</label>
+      <label>{{ t('admin.stars_amount') }}</label>
       <input type="number" name="min_stars" value="1" min="1" style="max-width:140px">
-      <label>Upload images &amp; videos — images become the expanding gallery, videos go to extra media</label>
+      <label>{{ t('admin.post_upload') }}</label>
       <input type="file" name="media" accept="image/*,video/*" multiple>
-      <button type="submit">Create post</button>
+      <button type="submit">{{ t('admin.create_post') }}</button>
     </form>
     <div id="postList" style="margin-top:12px"></div>
   </div>
@@ -295,23 +307,21 @@
 
   <!-- ══ STATS TAB ══ -->
   <section class="tab-panel" data-tab="stats">
-  <h2>Stats <span id="statsBadge" class="stat-badge" hidden></span></h2>
+  <h2>{{ t('admin.tab_stats') }} <span id="statsBadge" class="stat-badge" hidden></span></h2>
   <div class="card">
-    <p class="muted">Whole-app, per-photo and per-post engagement. Numbers in
-      <span style="color:#39e8a0">green</span> are new since you last checked.</p>
-    <div id="statsBox"><p class="muted">loading…</p></div>
-    <button id="statsSeen" class="ghost">Mark all as seen</button>
+    <p class="muted">{{ t('admin.stats_help') | safe }}</p>
+    <div id="statsBox"><p class="muted">{{ t('admin.loading') }}</p></div>
+    <button id="statsSeen" class="ghost">{{ t('admin.mark_all_seen') }}</button>
   </div>
   </section><!-- /stats -->
 
   <!-- ══ MESSAGES TAB ══ -->
   <section class="tab-panel" data-tab="messages">
-  <h2>Messages — Job / Advertising inquiries</h2>
+  <h2>{{ t('admin.messages_heading') }}</h2>
   <div class="card">
-    <p class="muted">Sent from the About page. Each shows the sender's Telegram @username.
-      Configure where new inquiries are forwarded under <b>Settings → Contact</b>.</p>
-    <div id="messagesBox"><p class="muted">loading…</p></div>
-    <button id="messagesSeen" class="ghost">Mark all as read</button>
+    <p class="muted">{{ t('admin.messages_help') | safe }}</p>
+    <div id="messagesBox"><p class="muted">{{ t('admin.loading') }}</p></div>
+    <button id="messagesSeen" class="ghost">{{ t('admin.mark_all_read') }}</button>
   </div>
   </section><!-- /messages -->
 
@@ -319,106 +329,99 @@
   <section class="tab-panel" data-tab="settings">
 
   <!-- SOCIAL LINKS -->
-  <h2>Social links</h2>
+  <h2>{{ t('admin.social_links') }}</h2>
   <div class="card">
     <form id="addSocialForm">
       <div class="row">
-        <div><label>Icon (Tabler name)</label>
+        <div><label>{{ t('admin.icon_name') }}</label>
           <input type="text" name="platform" placeholder="brand-instagram" /></div>
-        <div><label>Label</label><input type="text" name="label" placeholder="Instagram" /></div>
+        <div><label>{{ t('admin.label') }}</label><input type="text" name="label" placeholder="Instagram" /></div>
       </div>
-      <label>URL</label>
+      <label>{{ t('admin.url') }}</label>
       <input type="text" name="url" placeholder="https://instagram.com/..." />
       <div class="check">
         <input type="checkbox" id="social_in_header" name="in_header" value="1" />
-        <label for="social_in_header">Show this icon in the top header (next to search)</label>
+        <label for="social_in_header">{{ t('admin.show_in_header') }}</label>
       </div>
-      <button type="submit">Add link</button>
-      <span class="muted">Icon names: see tabler.io/icons — e.g. brand-tiktok, brand-instagram, brand-youtube, brand-x, mail.</span>
+      <button type="submit">{{ t('admin.add_link') }}</button>
+      <span class="muted">{{ t('admin.icon_help') }}</span>
     </form>
     <div id="socialList" style="margin-top:12px"></div>
   </div>
 
   <!-- LOGO -->
-  <h2>Logo</h2>
+  <h2>{{ t('admin.logo') }}</h2>
   <div class="card">
-    <p class="muted">Upload a <b>logo image</b> and it replaces the name in the top header,
-      and also shows full-width on the <b>About page</b>. With no image, the header falls
-      back to the <b>logo text</b>. Leave both empty and the app is unnamed.</p>
-    <p class="muted">The header scales any logo down to fit its 36px slot, so it can never
-      push the buttons out — but a wide, short mark reads best. Transparent PNG is ideal.</p>
+    <p class="muted">{{ t('admin.logo_help') | safe }}</p>
+    <p class="muted">{{ t('admin.logo_size_help') }}</p>
     <form id="logoForm">
-      <label>Logo text (used when no image is uploaded)</label>
+      <label>{{ t('admin.logo_text') }}</label>
       <input type="text" name="logo_text" id="logo_text" />
-      <label>Logo image — header + About page</label>
+      <label>{{ t('admin.logo_image') }}</label>
       <input type="file" name="logo_image" accept="image/*" />
       <div class="check">
         <input type="checkbox" id="clear_logo_image" name="clear_logo_image" value="1" />
-        <label for="clear_logo_image">Remove current logo image</label>
+        <label for="clear_logo_image">{{ t('admin.remove_logo') }}</label>
       </div>
-      <button type="submit">Save logo</button>
+      <button type="submit">{{ t('admin.save_logo') }}</button>
     </form>
   </div>
 
   <!-- TELEGRAM / SHARING -->
-  <h2>Telegram / sharing link</h2>
+  <h2>{{ t('admin.telegram_heading') }}</h2>
   <div class="card">
-    <p class="muted">Used by the Forward / Copy-link / Share buttons so they hand out your
-      Telegram mini-app address (t.me/…) instead of the raw https tunnel URL.</p>
+    <p class="muted">{{ t('admin.telegram_help') }}</p>
     <form id="telegramForm">
       <div class="row">
-        <div><label>Bot @username (no @)</label>
+        <div><label>{{ t('admin.bot_username') }}</label>
           <input type="text" name="bot_username" id="bot_username" placeholder="my_bot" /></div>
-        <div><label>Mini app short name</label>
+        <div><label>{{ t('admin.miniapp_name') }}</label>
           <input type="text" name="miniapp_name" id="miniapp_name" placeholder="gallery" /></div>
       </div>
-      <span class="muted">Link becomes <b>t.me/&lt;bot&gt;/&lt;short name&gt;</b>. Leave the short name blank to use t.me/&lt;bot&gt;?startapp.</span>
-      <br><button type="submit">Save link</button>
+      <span class="muted">{{ t('admin.link_help') | safe }}</span>
+      <br><button type="submit">{{ t('admin.save_link') }}</button>
     </form>
   </div>
 
   <!-- CONTACT -->
-  <h2>Contact — where inquiries go</h2>
+  <h2>{{ t('admin.contact_heading') }}</h2>
   <div class="card">
-    <p class="muted">When someone sends a Job / Advertising message from the About page, the bot
-      forwards it (with their @username) to this Telegram chat. A copy is always kept in the
-      <b>Messages</b> tab even if this is blank.</p>
+    <p class="muted">{{ t('admin.contact_help') | safe }}</p>
     <form id="contactForm">
-      <label>Telegram chat id (your own)</label>
+      <label>{{ t('admin.chat_id') }}</label>
       <input type="text" name="contact_chat_id" id="contact_chat_id" placeholder="e.g. 123456789" />
-      <span class="muted">Tip: message <b>@userinfobot</b> on Telegram to get your numeric chat id.
-        You must have started your bot once so it can DM you.</span>
-      <br><button type="submit">Save contact</button>
+      <span class="muted">{{ t('admin.chat_id_help') | safe }}</span>
+      <br><button type="submit">{{ t('admin.save_contact') }}</button>
     </form>
   </div>
 
   <!-- ABOUT TEXT -->
-  <h2>About text</h2>
+  <h2>{{ t('admin.about_text') }}</h2>
   <div class="card">
     <form id="aboutForm">
-      <label>Shown in the About tab</label>
+      <label>{{ t('admin.about_hint') }}</label>
       <textarea name="about_text" id="about_text"></textarea>
-      <button type="submit">Save about</button>
+      <button type="submit">{{ t('admin.save_about') }}</button>
     </form>
   </div>
 
   <!-- SPLASH -->
-  <h2>Intro / loading screen</h2>
+  <h2>{{ t('admin.intro_heading') }}</h2>
   <div class="card">
     <form id="splashForm">
-      <p class="muted">A self-made video (muted, any length). It plays once on open, then reveals the gallery.</p>
+      <p class="muted">{{ t('admin.intro_help') }}</p>
       <div class="check">
         <input type="checkbox" id="splash_enabled" name="splash_enabled" value="1" />
-        <label for="splash_enabled">Use loading screen</label>
+        <label for="splash_enabled">{{ t('admin.use_intro') }}</label>
       </div>
-      <label>Intro video</label>
+      <label>{{ t('admin.intro_video') }}</label>
       <input type="file" name="splash_video" accept="video/*" />
       <div class="check">
         <input type="checkbox" id="clear_splash" name="clear_splash" value="1" />
-        <label for="clear_splash">Remove current intro video</label>
+        <label for="clear_splash">{{ t('admin.remove_intro') }}</label>
       </div>
       <span class="muted" id="splashCurrent"></span>
-      <br><button type="submit">Save intro</button>
+      <br><button type="submit">{{ t('admin.save_intro') }}</button>
     </form>
   </div>
 
@@ -449,7 +452,7 @@
       if (!res.ok) return onApiError(res);
       const list = await res.json();
       const box = document.getElementById('mediaList');
-      box.innerHTML = list.length ? '' : '<p class="muted">No media yet.</p>';
+      box.innerHTML = list.length ? '' : `<p class="muted">${T('admin.no_media')}</p>`;
       list.forEach(m => {
         const src = '/static/media/' + m.filename;
         const entry = document.createElement('div');
@@ -465,48 +468,48 @@
                <small>${m.type} · ${m.size} · ${m.likes} likes
                  ${m.is_locked ? `<span class="tag lock">lock ${m.min_stars}★</span>` : ''}</small>
              </div>
-             <button class="ghost" data-edit="${m.id}">Edit</button>
-             <button class="danger" data-del="${m.id}">Delete</button>
+             <button class="ghost" data-edit="${m.id}">${T('admin.edit')}</button>
+             <button class="danger" data-del="${m.id}">${T('admin.delete')}</button>
            </div>
            <form class="editbox" data-editform="${m.id}" hidden>
              <div class="row">
-               <div><label>Title</label><input type="text" name="title" value="${esc(m.title)}"></div>
-               <div><label>Type</label>
+               <div><label>{{ t('admin.title') }}</label><input type="text" name="title" value="${esc(m.title)}"></div>
+               <div><label>{{ t('admin.type') }}</label>
                  <select name="type">
-                   <option value="photo" ${sel(m.type,'photo')}>Photo</option>
-                   <option value="video" ${sel(m.type,'video')}>Video</option>
+                   <option value="photo" ${sel(m.type,'photo')}>${T('admin.photo')}</option>
+                   <option value="video" ${sel(m.type,'video')}>${T('admin.video')}</option>
                  </select>
                </div>
              </div>
-             <label>Description</label>
+             <label>{{ t('admin.description') }}</label>
              <textarea name="description">${esc(m.description)}</textarea>
              <div class="row">
-               <div><label>Date label</label><input type="text" name="date_label" value="${esc(m.date_label)}"></div>
-               <div><label>Year</label><input type="text" name="year" value="${esc(m.year)}"></div>
-               <div><label>Wall size</label>
+               <div><label>{{ t('admin.date_label') }}</label><input type="text" name="date_label" value="${esc(m.date_label)}"></div>
+               <div><label>{{ t('admin.year') }}</label><input type="text" name="year" value="${esc(m.year)}"></div>
+               <div><label>{{ t('admin.wall_size') }}</label>
                  <select name="size">
-                   <option value="medium" ${sel(m.size,'medium')}>Medium</option>
-                   <option value="tall" ${sel(m.size,'tall')}>Tall</option>
-                   <option value="short" ${sel(m.size,'short')}>Short</option>
+                   <option value="medium" ${sel(m.size,'medium')}>${T('admin.size_medium')}</option>
+                   <option value="tall" ${sel(m.size,'tall')}>${T('admin.size_tall')}</option>
+                   <option value="short" ${sel(m.size,'short')}>${T('admin.size_short')}</option>
                  </select>
                </div>
              </div>
              <div class="row">
                <div class="check">
                  <input type="checkbox" name="is_locked" value="1" ${m.is_locked ? 'checked' : ''}>
-                 <label>Lock — viewers pay Stars to see it</label>
+                 <label>${T('admin.lock')}</label>
                </div>
-               <div><label>Min stars</label>
+               <div><label>${T('admin.min_stars_short')}</label>
                  <input type="number" name="min_stars" min="1" value="${m.min_stars}"></div>
              </div>
-             <label>Categories (choose up to 3)</label>
+             <label>{{ t('admin.categories_max3') }}</label>
              <div class="cats-pick${CATEGORIES.length ? '' : ' empty'}">${catChecks((m.category_ids || '').split(','))}</div>
              <input type="hidden" name="category_ids_present" value="1">
-             <label>Replace file (optional)</label>
+             <label>${T('admin.replace_file')}</label>
              <input type="file" name="file" accept="image/*,video/*">
              <div>
-               <button type="submit">Save changes</button>
-               <button type="button" class="ghost" data-canceledit="${m.id}">Cancel</button>
+               <button type="submit">${T('admin.save_changes')}</button>
+               <button type="button" class="ghost" data-canceledit="${m.id}">${T('admin.cancel')}</button>
              </div>
            </form>`;
         box.appendChild(entry);
@@ -604,32 +607,32 @@
       if (!res.ok) return onApiError(res);
       const list = await res.json();
       const box = document.getElementById('socialList');
-      box.innerHTML = list.length ? '' : '<p class="muted">No links yet.</p>';
+      box.innerHTML = list.length ? '' : `<p class="muted">${T('admin.no_links')}</p>`;
       list.forEach(s => {
         const entry = document.createElement('div');
         entry.className = 'media-entry';
         entry.innerHTML =
           `<div class="item">
              <i class="ti ti-${(s.platform||'link').replace(/^ti-/,'')}" style="font-size:20px;color:#39e8a0"></i>
-             <div class="meta"><b>${esc(s.label || s.platform)} ${s.in_header ? '<span class="tag">header</span>' : ''}</b><small>${esc(s.url)}</small></div>
-             <button class="ghost" data-editsocial="${s.id}">Edit</button>
-             <button class="danger" data-delsocial="${s.id}">Remove</button>
+             <div class="meta"><b>${esc(s.label || s.platform)} ${s.in_header ? `<span class="tag">${T('admin.header')}</span>` : ''}</b><small>${esc(s.url)}</small></div>
+             <button class="ghost" data-editsocial="${s.id}">${T('admin.edit')}</button>
+             <button class="danger" data-delsocial="${s.id}">${T('admin.remove')}</button>
            </div>
            <form class="editbox" data-socialform="${s.id}" hidden>
              <div class="row">
-               <div><label>Icon (Tabler name)</label><input type="text" name="platform" value="${esc(s.platform)}"></div>
-               <div><label>Label</label><input type="text" name="label" value="${esc(s.label)}"></div>
+               <div><label>{{ t('admin.icon_name') }}</label><input type="text" name="platform" value="${esc(s.platform)}"></div>
+               <div><label>${T('admin.label')}</label><input type="text" name="label" value="${esc(s.label)}"></div>
              </div>
-             <label>URL</label>
+             <label>{{ t('admin.url') }}</label>
              <input type="text" name="url" value="${esc(s.url)}">
              <div class="check">
                <input type="checkbox" name="in_header" value="1" ${s.in_header ? 'checked' : ''}>
-               <label>Show this icon in the top header</label>
+               <label>${T('admin.show_in_header_short')}</label>
              </div>
              <input type="hidden" name="in_header_present" value="1">
              <div>
-               <button type="submit">Save</button>
-               <button type="button" class="ghost" data-cancelsocial="${s.id}">Cancel</button>
+               <button type="submit">${T('admin.save')}</button>
+               <button type="button" class="ghost" data-cancelsocial="${s.id}">${T('admin.cancel')}</button>
              </div>
            </form>`;
         box.appendChild(entry);
@@ -735,13 +738,13 @@
 
       // Management list.
       const box = document.getElementById('categoryList');
-      box.innerHTML = CATEGORIES.length ? '' : '<p class="muted">No categories yet.</p>';
+      box.innerHTML = CATEGORIES.length ? '' : `<p class="muted">${T('admin.no_categories')}</p>`;
       CATEGORIES.forEach(c => {
         const el = document.createElement('div');
         el.className = 'item';
         el.innerHTML =
           `<div class="meta"><b>${esc(c.name)}</b></div>
-           <button class="danger" data-delcat="${c.id}">Remove</button>`;
+           <button class="danger" data-delcat="${c.id}">${T('admin.remove')}</button>`;
         box.appendChild(el);
       });
     }
@@ -792,7 +795,7 @@
           <button type="button" data-cmd="underline"><u>U</u></button>
           <button type="button" data-cmd="insertUnorderedList">• List</button>
           <button type="button" data-cmd="insertOrderedList">1. List</button>
-          <label class="rte-color">Color<input type="color" data-cmd="foreColor" value="#39e8a0"></label>
+          <label class="rte-color">${T('admin.color')}<input type="color" data-cmd="foreColor" value="#39e8a0"></label>
           <span class="rte-emojis">${emo}</span>
         </div>
         <div class="rte-editor" contenteditable="true" data-rte>${initial || ''}</div>
@@ -806,7 +809,7 @@
         <div class="hashtag-build">
           <input type="text" class="ht-input" placeholder="trending">
           <input type="color" class="ht-color" value="#39e8a0">
-          <button type="button" class="ht-add">Add tag</button>
+          <button type="button" class="ht-add">${T('admin.add_tag')}</button>
         </div>
         <div class="hashtag-list" data-hashtags></div>
         <input type="hidden" name="hashtags" value="${safe}">`;
@@ -876,7 +879,7 @@
       if (!res.ok) return onApiError(res);
       const list = await res.json();
       const box = document.getElementById('postList');
-      box.innerHTML = list.length ? '' : '<p class="muted">No posts yet.</p>';
+      box.innerHTML = list.length ? '' : `<p class="muted">${T('admin.no_posts')}</p>`;
       list.forEach(p => {
         const cats = (p.category_ids || '').split(',').filter(Boolean);
         const entry = document.createElement('div');
@@ -884,27 +887,27 @@
         entry.innerHTML =
           `<div class="item">
              <div class="meta"><b>${esc(p.title) || '(untitled)'}</b><small>post · ${p.likes || 0} likes</small></div>
-             <button class="ghost" data-editpost="${p.id}">Edit</button>
-             <button class="danger" data-delpost="${p.id}">Delete</button>
+             <button class="ghost" data-editpost="${p.id}">${T('admin.edit')}</button>
+             <button class="danger" data-delpost="${p.id}">${T('admin.delete')}</button>
            </div>
            <form class="editbox" data-postform="${p.id}" hidden enctype="multipart/form-data">
-             <label>Title</label>
+             <label>{{ t('admin.title') }}</label>
              <input type="text" name="title" value="${esc(p.title)}">
-             <label>Body</label>
+             <label>{{ t('admin.body') }}</label>
              ${rteHTML(p.body || '')}
-             <label>Categories</label>
+             <label>{{ t('admin.categories') }}</label>
              <div class="cats-pick${CATEGORIES.length ? '' : ' empty'}">${catChecks(cats)}</div>
              <input type="hidden" name="category_ids_present" value="1">
              ${hashtagAreaHTML(p.hashtags || '[]')}
-             <label>Stars amount (support)</label>
+             <label>{{ t('admin.stars_amount') }}</label>
              <input type="number" name="min_stars" value="${p.min_stars || 1}" min="1" style="max-width:140px">
              <label>Current media (× to delete)</label>
-             <div class="post-media-manage" data-postmedia="${p.id}"><span class="muted">loading…</span></div>
-             <label>Add more media</label>
+             <div class="post-media-manage" data-postmedia="${p.id}"><span class="muted">${T('admin.loading')}</span></div>
+             <label>${T('admin.add_more_media')}</label>
              <input type="file" name="media" accept="image/*,video/*" multiple>
              <div>
-               <button type="submit">Save</button>
-               <button type="button" class="ghost" data-cancelpost="${p.id}">Cancel</button>
+               <button type="submit">${T('admin.save')}</button>
+               <button type="button" class="ghost" data-cancelpost="${p.id}">${T('admin.cancel')}</button>
              </div>
            </form>`;
         box.appendChild(entry);
@@ -918,13 +921,13 @@
       const res = await fetch('/api/admin/posts/' + postId + '/media');
       if (!res.ok) return;
       const media = await res.json();
-      box.innerHTML = media.length ? '' : '<span class="muted">No media yet.</span>';
+      box.innerHTML = media.length ? '' : `<span class="muted">${T('admin.no_media')}</span>`;
       media.forEach(m => {
         const src = '/static/media/' + m.filename;
         const el = document.createElement('div');
         el.className = 'pm-item';
         el.innerHTML = (m.type === 'video' ? `<video src="${src}" muted></video>` : `<img src="${src}">`) +
-          (m.type === 'video' ? '<span class="pm-badge">video</span>' : '') +
+          (m.type === 'video' ? `<span class="pm-badge">${T('admin.video').toLowerCase()}</span>` : '') +
           `<button type="button" class="pm-del" data-delmedia="${m.id}" data-post="${postId}">×</button>`;
         box.appendChild(el);
       });
@@ -1008,10 +1011,10 @@
         `<div><div class="so-num">${v}${d > 0 ? `<span class="stat-delta">+${d}</span>` : ''}</div>
            <div class="so-lbl">${lbl}</div></div>`;
       const cell = (v, d) => `<td class="num">${v}${d > 0 ? `<span class="stat-delta">+${d}</span>` : ''}</td>`;
-      const table = (rows, head) => !rows.length ? '<p class="muted">Nothing yet.</p>' :
+      const table = (rows, head) => !rows.length ? `<p class="muted">${T('admin.nothing_yet')}</p>` :
         `<table class="stats-table"><thead><tr><th>${head}</th>
-           <th class="num">Views</th><th class="num">Unique</th>
-           <th class="num">Likes</th><th class="num">Stars</th></tr></thead><tbody>` +
+           <th class="num">${T('admin.views')}</th><th class="num">${T('admin.unique')}</th>
+           <th class="num">${T('admin.likes')}</th><th class="num">${T('admin.stars')}</th></tr></thead><tbody>` +
         rows.map(r =>
           `<tr class="stats-row ${r.changed ? 'changed' : ''}">
              <td>${esc(r.label) || '(untitled)'}</td>
@@ -1019,10 +1022,10 @@
              ${cell(r.likes, r.delta.likes)}${cell(r.stars, r.delta.stars)}</tr>`).join('') +
         `</tbody></table>`;
       box.innerHTML =
-        `<div class="stats-sub">Overall</div>
+        `<div class="stats-sub">${T('admin.overall')}</div>
          <div class="stats-overall">${big(o.visits, od.visits, 'Visits')}${big(o.uniques, od.uniques, 'Unique visitors')}</div>
-         <div class="stats-sub">Photos</div>${table(data.photos || [], 'Photo')}
-         <div class="stats-sub">Posts</div>${table(data.posts || [], 'Post')}`;
+         <div class="stats-sub">${T('admin.photos')}</div>${table(data.photos || [], T('admin.photo'))}
+         <div class="stats-sub">${T('admin.posts')}</div>${table(data.posts || [], T('admin.post'))}`;
     }
     document.getElementById('statsSeen').addEventListener('click', async () => {
       const res = await fetch('/api/admin/stats/seen', { method: 'POST' });
@@ -1041,7 +1044,7 @@
       const data = await res.json();
       setMsgBadge(data.unseen);
       const box = document.getElementById('messagesBox');
-      if (!data.messages.length) { box.innerHTML = '<p class="muted">No messages yet.</p>'; return; }
+      if (!data.messages.length) { box.innerHTML = `<p class="muted">${T('admin.no_messages')}</p>`; return; }
       box.innerHTML = data.messages.map(m => {
         const when = new Date(m.ts * 1000).toLocaleString();
         const who = m.username ? '@' + esc(m.username)
@@ -1049,7 +1052,7 @@
         return `<div class="msg ${m.seen ? '' : 'unseen'}">
             <div class="msg-head"><span class="msg-from">${who}</span><span class="msg-time">${when}</span></div>
             <div class="msg-body">${esc(m.body)}</div>
-            <button class="danger" data-delmsg="${m.id}">Delete</button>
+            <button class="danger" data-delmsg="${m.id}">${T('admin.delete')}</button>
           </div>`;
       }).join('');
     }
