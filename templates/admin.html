@@ -17,32 +17,51 @@
     :root {
       --txt-no-cats:    {{ t('admin.no_categories_hint') | tojson }};
       --txt-long-read:  {{ t('admin.long_read_hint') | tojson }};
+
+      /* Admin follows the same Appearance settings as the gallery. These are
+         the fallbacks; theme.py re-declares the overridden ones at the end of
+         this head, where a later :root wins. The panel used to hardcode every
+         one of these, so choosing a colour or uploading a font changed the
+         gallery and left the admin panel untouched. */
+      --bg-page:        #0c0c0e;
+      --bg-base:        #141417;
+      --bg-raised:      #1a1a1f;
+      --border-raw:     #2a2a30;
+      --text-primary:   #e8e4dc;
+      --text-label:     #9a958c;
+      --text-secondary: #7a7672;
+      --green:          #39e8a0;
+      --green-dim:      #1a6644;
+      --green-bg:       rgba(57, 232, 160, 0.05);
+      --green-soft:     rgba(57, 232, 160, 0.12);
+      --font-display:   ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      --font-mono:      ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-      background: #0c0c0e; color: #e8e4dc;
+      font-family: var(--font-mono);
+      background: var(--bg-page); color: var(--text-primary);
       max-width: 1200px; margin: 0 auto; padding: 18px 24px 60px;
       font-size: 14px; line-height: 1.5;
     }
     h1 { font-size: 18px; letter-spacing: 0.04em; margin-bottom: 4px; }
     h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em;
-         color: #9a958c; margin: 26px 0 12px; border-bottom: 1px solid #2a2a30;
+         color: var(--text-label); margin: 26px 0 12px; border-bottom: 1px solid var(--border-raw);
          padding-bottom: 6px; }
-    .muted { color: #7a7672; font-size: 12px; }
-    a { color: #39e8a0; }
+    .muted { color: var(--text-secondary); font-size: 12px; }
+    a { color: var(--green); }
 
     section { margin-top: 8px; }
-    .card { background: #141417; border: 1px solid #2a2a30; padding: 14px; margin-bottom: 12px; }
+    .card { background: var(--bg-base); border: 1px solid var(--border-raw); padding: 14px; margin-bottom: 12px; }
 
     label { display: block; font-size: 11px; text-transform: uppercase;
-            letter-spacing: 0.08em; color: #9a958c; margin: 10px 0 4px; }
+            letter-spacing: 0.08em; color: var(--text-label); margin: 10px 0 4px; }
     input[type=text], input[type=number], input[type=password], textarea, select {
-      width: 100%; background: #0c0c0e; border: 1px solid #2a2a30; color: #e8e4dc;
+      width: 100%; background: var(--bg-page); border: 1px solid var(--border-raw); color: var(--text-primary);
       padding: 9px 10px; font: inherit; font-size: 13px;
     }
     textarea { resize: vertical; min-height: 60px; }
-    input[type=file] { width: 100%; font-size: 12px; color: #9a958c; margin-top: 4px; }
+    input[type=file] { width: 100%; font-size: 12px; color: var(--text-label); margin-top: 4px; }
     .row { display: flex; gap: 10px; flex-wrap: wrap; }
     .row > div { flex: 1; min-width: 120px; }
     .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
@@ -50,62 +69,62 @@
     .check label { margin: 0; }
 
     button {
-      background: #39e8a0; color: #07140d; border: 0; padding: 9px 16px;
+      background: var(--green); color: #07140d; border: 0; padding: 9px 16px;
       font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
       text-transform: uppercase; letter-spacing: 0.06em; margin-top: 14px;
     }
-    button.ghost { background: transparent; color: #e8e4dc; border: 1px solid #2a2a30; }
+    button.ghost { background: transparent; color: var(--text-primary); border: 1px solid var(--border-raw); }
     button.danger { background: transparent; color: #ff6a6a; border: 1px solid #5a2a2a; }
     button:active { opacity: 0.8; }
 
     .item {
-      display: flex; align-items: center; gap: 12px; background: #141417;
-      border: 1px solid #2a2a30; padding: 10px; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 12px; background: var(--bg-base);
+      border: 1px solid var(--border-raw); padding: 10px; margin-bottom: 8px;
     }
     .item .thumb { width: 52px; height: 52px; object-fit: cover; background: #000;
-                   flex-shrink: 0; border: 1px solid #2a2a30; }
+                   flex-shrink: 0; border: 1px solid var(--border-raw); }
     .item .meta { flex: 1; min-width: 0; }
     .item .meta b { display: block; font-size: 13px; }
-    .item .meta small { color: #7a7672; }
+    .item .meta small { color: var(--text-secondary); }
     .item .handle { cursor: grab; color: #555; padding: 0 4px; }
-    .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border: 1px solid #2a2a30;
-           text-transform: uppercase; letter-spacing: 0.06em; color: #9a958c; }
+    .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border: 1px solid var(--border-raw);
+           text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-label); }
     .tag.lock { color: #ff6a6a; border-color: #5a2a2a; }
     .media-entry { margin-bottom: 8px; }
     .media-entry .item { margin-bottom: 0; }
     .media-entry.dragging { opacity: 0.4; }
-    .editbox { background: #101013; border: 1px solid #2a2a30; border-top: 0;
+    .editbox { background: #101013; border: 1px solid var(--border-raw); border-top: 0;
                padding: 4px 14px 14px; }
     .editbox[hidden] { display: none; }
     .editbox button { margin-right: 8px; }
     .item button { margin-top: 0; }
     input[type=color].colorpick { width: 100%; height: 38px; padding: 2px;
-        background: #0c0c0e; border: 1px solid #2a2a30; cursor: pointer; }
-    input[type=range] { width: 100%; accent-color: #39e8a0; margin-top: 4px; }
+        background: var(--bg-page); border: 1px solid var(--border-raw); cursor: pointer; }
+    input[type=range] { width: 100%; accent-color: var(--green); margin-top: 4px; }
     .cats-pick { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; }
     /* CSS content: cannot call t(), so the strings arrive as custom
        properties set from the translations (see :root below). */
-    .cats-pick.empty::before { content: var(--txt-no-cats); color: #7a7672; font-size: 12px; }
+    .cats-pick.empty::before { content: var(--txt-no-cats); color: var(--text-secondary); font-size: 12px; }
     .cats-pick label { margin: 0; display: flex; align-items: center; gap: 6px;
-                       text-transform: none; letter-spacing: 0; color: #e8e4dc; font-size: 13px; }
+                       text-transform: none; letter-spacing: 0; color: var(--text-primary); font-size: 13px; }
     .cats-pick input { width: auto; }
     .media-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
     .media-pick label { position: relative; margin: 0; width: 64px; cursor: pointer; }
     .media-pick img, .media-pick video { width: 64px; height: 64px; object-fit: cover;
-        border: 2px solid #2a2a30; display: block; background: #000; }
+        border: 2px solid var(--border-raw); display: block; background: #000; }
     .media-pick input { position: absolute; top: 4px; left: 4px; width: auto; z-index: 1; }
-    .media-pick input:checked + img, .media-pick input:checked + video { border-color: #39e8a0; }
-    .media-pick .mp-empty { color: #7a7672; font-size: 12px; }
+    .media-pick input:checked + img, .media-pick input:checked + video { border-color: var(--green); }
+    .media-pick .mp-empty { color: var(--text-secondary); font-size: 12px; }
     /* Rich text editor */
-    .rte { border: 1px solid #2a2a30; }
+    .rte { border: 1px solid var(--border-raw); }
     .rte-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
-        padding: 6px; background: #0c0c0e; border-bottom: 1px solid #2a2a30; }
-    .rte-toolbar button { margin: 0; padding: 4px 9px; background: #1a1a1e; color: #e8e4dc;
-        border: 1px solid #2a2a30; font-size: 13px; text-transform: none; letter-spacing: 0; }
-    .rte-toolbar button:active { background: #2a2a30; }
+        padding: 6px; background: var(--bg-page); border-bottom: 1px solid var(--border-raw); }
+    .rte-toolbar button { margin: 0; padding: 4px 9px; background: #1a1a1e; color: var(--text-primary);
+        border: 1px solid var(--border-raw); font-size: 13px; text-transform: none; letter-spacing: 0; }
+    .rte-toolbar button:active { background: var(--border-raw); }
     .rte-color { display: inline-flex; align-items: center; gap: 4px; margin: 0; padding: 0 4px;
-        color: #9a958c; font-size: 11px; }
-    .rte-color input { width: 26px; height: 24px; padding: 0; border: 1px solid #2a2a30; background: none; }
+        color: var(--text-label); font-size: 11px; }
+    .rte-color input { width: 26px; height: 24px; padding: 0; border: 1px solid var(--border-raw); background: none; }
     .rte-emojis { display: inline-flex; flex-wrap: wrap; gap: 2px; }
     .rte-emojis button { padding: 3px 5px; font-size: 15px; background: transparent; border: 0; }
     .rte-editor { min-height: 120px; padding: 10px 12px; font-family: inherit; font-size: 14px;
@@ -125,54 +144,57 @@
     .ht-chip .ht-del { margin: 0; padding: 0 5px; background: transparent; border: 0; color: inherit; font-size: 14px; }
     /* Post media manager (in edit form) */
     .post-media-manage { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-    .pm-item { position: relative; width: 64px; height: 64px; border: 1px solid #2a2a30; }
+    .pm-item { position: relative; width: 64px; height: 64px; border: 1px solid var(--border-raw); }
     .pm-item img, .pm-item video { width: 100%; height: 100%; object-fit: cover; display: block; background:#000; }
     .pm-item .pm-del { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px;
         border-radius: 50%; background: #ff6a6a; color: #07140d; border: 0; margin: 0; padding: 0;
         font-size: 13px; line-height: 20px; cursor: pointer; }
     .pm-badge { position: absolute; bottom: 0; left: 0; right: 0; font-size: 9px; text-align: center;
-        background: rgba(0,0,0,0.6); color: #39e8a0; }
+        background: rgba(0,0,0,0.6); color: var(--green); }
     .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-             background: #1e1e22; border: 1px solid #2a2a30; padding: 10px 16px;
+             background: #1e1e22; border: 1px solid var(--border-raw); padding: 10px 16px;
              font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
     .toast.show { opacity: 1; }
     .login { max-width: 320px; margin: 60px auto; }
     /* Tabs */
     .tab-nav { display: flex; flex-wrap: wrap; gap: 4px; position: sticky; top: 0;
-        background: #0c0c0e; padding: 10px 0; margin: 8px 0 4px; z-index: 5;
-        border-bottom: 1px solid #2a2a30; }
-    .tab-btn { margin: 0; background: transparent; color: #9a958c; border: 1px solid #2a2a30;
+        background: var(--bg-page); padding: 10px 0; margin: 8px 0 4px; z-index: 5;
+        border-bottom: 1px solid var(--border-raw); }
+    .tab-btn { margin: 0; background: transparent; color: var(--text-label); border: 1px solid var(--border-raw);
         padding: 8px 14px; font-size: 12px; }
-    .tab-btn.active { background: #39e8a0; color: #07140d; }
+    .tab-btn.active { background: var(--green); color: #07140d; }
     .tab-btn .tab-count { display: inline-block; background: #ff6a6a; color: #07140d;
         border-radius: 9px; padding: 0 6px; font-size: 10px; margin-left: 6px; vertical-align: middle; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     /* Messages */
-    .msg { background: #141417; border: 1px solid #2a2a30; padding: 10px 12px; margin-bottom: 8px; }
-    .msg.unseen { border-left: 2px solid #39e8a0; }
+    .msg { background: var(--bg-base); border: 1px solid var(--border-raw); padding: 10px 12px; margin-bottom: 8px; }
+    .msg.unseen { border-left: 2px solid var(--green); }
     .msg-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .msg-from { color: #39e8a0; font-size: 13px; }
-    .msg-time { color: #7a7672; font-size: 11px; }
+    .msg-from { color: var(--green); font-size: 13px; }
+    .msg-time { color: var(--text-secondary); font-size: 11px; }
     .msg-body { margin-top: 6px; white-space: pre-wrap; font-size: 13px; }
     .msg .danger { margin-top: 8px; padding: 4px 10px; font-size: 11px; }
     /* Stats */
     .stats-sub { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
-        color: #9a958c; margin: 18px 0 6px; }
+        color: var(--text-label); margin: 18px 0 6px; }
     .stats-overall { display: flex; gap: 22px; flex-wrap: wrap; margin: 4px 0 6px; }
-    .stats-overall .so-num { font-size: 22px; color: #e8e4dc; }
-    .stats-overall .so-lbl { font-size: 11px; color: #7a7672; text-transform: uppercase; letter-spacing: 0.06em; }
-    .stat-badge { display: inline-block; background: #39e8a0; color: #07140d;
+    .stats-overall .so-num { font-size: 22px; color: var(--text-primary); }
+    .stats-overall .so-lbl { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-badge { display: inline-block; background: var(--green); color: #07140d;
         border-radius: 10px; padding: 1px 9px; font-size: 11px; font-weight: 600;
         letter-spacing: 0; text-transform: none; margin-left: 8px; vertical-align: middle; }
     .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .stats-table th, .stats-table td { padding: 8px 10px; border-bottom: 1px solid #2a2a30; text-align: left; }
-    .stats-table th { color: #9a958c; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .stats-table th, .stats-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-raw); text-align: left; }
+    .stats-table th { color: var(--text-label); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
     .stats-table td.num, .stats-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
-    .stats-table tfoot td { border-bottom: 0; border-top: 1px solid #2a2a30; color: #9a958c; }
-    .stats-row.changed td:first-child { box-shadow: inset 2px 0 0 #39e8a0; }
-    .stat-delta { color: #39e8a0; font-size: 11px; margin-left: 5px; }
+    .stats-table tfoot td { border-bottom: 0; border-top: 1px solid var(--border-raw); color: var(--text-label); }
+    .stats-row.changed td:first-child { box-shadow: inset 2px 0 0 var(--green); }
+    .stat-delta { color: var(--green); font-size: 11px; margin-left: 5px; }
   </style>
+  <!-- Appearance chosen in the admin panel, applied to the panel itself.
+       Last in the head so its :root wins over the fallbacks above. -->
+  <style id="themeOverrides">{{ theme_css | safe }}</style>
 </head>
 <body>
 
@@ -552,7 +574,9 @@
       const box = document.getElementById('mediaList');
       box.innerHTML = list.length ? '' : `<p class="muted">${T('admin.no_media')}</p>`;
       list.forEach(m => {
-        const src = '/static/media/' + m.filename;
+        /* From the server, never assembled here: on R2 the files are not on
+           this host and a '/static/media/' guess 404s every thumbnail. */
+        const src = m.url || ('/static/media/' + m.filename);
         const entry = document.createElement('div');
         entry.className = 'media-entry'; entry.dataset.id = m.id;
         const thumb = m.type === 'video'
@@ -716,7 +740,7 @@
         entry.className = 'media-entry';
         entry.innerHTML =
           `<div class="item">
-             <i class="ti ti-${(s.platform||'link').replace(/^ti-/,'')}" style="font-size:20px;color:#39e8a0"></i>
+             <i class="ti ti-${(s.platform||'link').replace(/^ti-/,'')}" style="font-size:20px;color:var(--green)"></i>
              <div class="meta"><b>${esc(s.label || s.platform)} ${s.in_header ? `<span class="tag">${T('admin.header')}</span>` : ''}</b><small>${esc(s.url)}</small></div>
              <button class="ghost" data-editsocial="${s.id}">${T('admin.edit')}</button>
              <button class="danger" data-delsocial="${s.id}">${T('admin.remove')}</button>
@@ -837,7 +861,9 @@
       accent_color: '#39e8a0',
       bg_page:      '#0a0a0a',
       bg_base:      '#111114',
-      bg_raised:    '#141417',
+      /* Must match the gallery's real --bg-raised, or the picker opens showing
+         a colour the app is not using. It read #141417 before this. */
+      bg_raised:    '#171719',
       cell_radius:  '0',
     };
 
@@ -1104,12 +1130,21 @@
           <input type="number" name="price_stars" min="0"
                  value="${p.price_stars || 0}" style="max-width:140px">
         </div>
+        <label>${T('admin.snippet_upload')}</label>
+        <input type="file" name="snippet_files" accept=".html,.htm,.css,.js,.zip" multiple>
+        <small class="muted">${T('admin.snippet_upload_hint')}</small>
+        <details style="margin-top:10px">
+          <summary style="cursor:pointer;font-size:11px;text-transform:uppercase;
+                          letter-spacing:0.08em;color:var(--text-label)">
+            ${T('admin.snippet_manual')}
+          </summary>
         <label>${T('admin.snippet_html')}</label>
         <textarea name="snippet_html" rows="4" spellcheck="false">${esc(p.snippet_html || '')}</textarea>
         <label>${T('admin.snippet_css')}</label>
         <textarea name="snippet_css" rows="4" spellcheck="false">${esc(p.snippet_css || '')}</textarea>
         <label>${T('admin.snippet_js')}</label>
         <textarea name="snippet_js" rows="4" spellcheck="false">${esc(p.snippet_js || '')}</textarea>
+        </details>
         <small class="muted">${T('admin.snippet_hint')}</small>
         <label>${T('admin.preview_bg')}</label>
         <select name="preview_bg" style="max-width:220px">
@@ -1136,7 +1171,9 @@
       const media = await res.json();
       box.innerHTML = media.length ? '' : `<span class="muted">${T('admin.no_media')}</span>`;
       media.forEach(m => {
-        const src = '/static/media/' + m.filename;
+        /* From the server, never assembled here: on R2 the files are not on
+           this host and a '/static/media/' guess 404s every thumbnail. */
+        const src = m.url || ('/static/media/' + m.filename);
         const el = document.createElement('div');
         el.className = 'pm-item';
         el.innerHTML = (m.type === 'video' ? `<video src="${src}" muted></video>` : `<img src="${src}">`) +

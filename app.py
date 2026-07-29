@@ -32,6 +32,7 @@ import database as db
 import downloads
 import i18n
 import imagesize
+import snippets
 import storage
 import theme
 
@@ -100,7 +101,9 @@ def inject_globals():
         "i18n_app_json": subset("nav.", "app.", "share."),
         "i18n_admin_json": subset("admin."),
         "languages": i18n.choices(),
-        "theme_css": theme.css_overrides(settings),
+        # Uploaded fonts are stored through the storage backend, so their URL
+        # comes from there rather than being assumed to be on this host.
+        "theme_css": theme.css_overrides(settings, font_url=media_url),
     }
 
 
@@ -647,10 +650,26 @@ def admin_logout():
 
 # ── Admin: media ──────────────────────────────────────────────────────────
 
+def with_urls(rows):
+    """Attach each row's real public URL.
+
+    The admin panel used to build '/static/media/' + filename itself, which is
+    only correct on the local backend. On R2 the files are not on this server
+    at all and every thumbnail 404s, so the URL has to come from the storage
+    layer — the same place the public API gets it.
+    """
+    out = []
+    for row in rows:
+        item = dict(row)
+        item["url"] = media_url(item.get("filename"))
+        out.append(item)
+    return out
+
+
 @app.route("/api/admin/media", methods=["GET"])
 @admin_required
 def admin_list_media():
-    return jsonify(db.list_media())
+    return jsonify(with_urls(db.list_media()))
 
 
 @app.route("/api/admin/media", methods=["POST"])
@@ -904,6 +923,18 @@ def admin_update_post(post_id):
         fields["category_ids"] = ",".join(request.form.getlist("category_ids"))
     if "show_stars_present" in request.form:
         fields["show_stars"] = "1" if request.form.get("show_stars") else "0"
+
+    # Ready-made snippet files, the alternative to pasting into the textareas.
+    # Applied after the form fields so picking a file wins over whatever the
+    # (untouched) textarea still held.
+    uploaded = [(f.filename, f.read()) for f in request.files.getlist("snippet_files")
+                if f and f.filename]
+    if uploaded:
+        try:
+            fields.update(snippets.from_uploads(uploaded))
+        except snippets.SnippetError as exc:
+            return jsonify({"error": str(exc)}), 400
+
     db.update_post(post_id, fields)
     _save_post_media(post_id)        # any newly uploaded media appended
     return jsonify({"ok": True})
@@ -920,7 +951,7 @@ def admin_delete_post(post_id):
 @app.route("/api/admin/posts/<int:post_id>/media", methods=["GET"])
 @admin_required
 def admin_post_media(post_id):
-    return jsonify(db.list_post_media(post_id))
+    return jsonify(with_urls(db.list_post_media(post_id)))
 
 
 # ── Admin: social links ───────────────────────────────────────────────────
@@ -989,6 +1020,12 @@ def admin_set_settings():
     # Font uploads. Separate field names from the settings keys, so the stored
     # value stays the randomised filename we chose rather than anything the
     # browser sent. theme.py revalidates it before building a url().
+    #
+    # These go through the storage backend, not onto this server's disk. They
+    # used to land in static/fonts, which on a host with an ephemeral
+    # filesystem meant every redeploy silently reverted the app to its bundled
+    # fonts while the setting still named the uploaded one — a 404 in a
+    # @font-face, which fails invisibly.
     for field, setting in (("font_display_file", "font_display"),
                            ("font_mono_file", "font_mono")):
         upload = request.files.get(field)
@@ -997,10 +1034,12 @@ def admin_set_settings():
         extension = ext_of(upload.filename)
         if extension not in FONT_EXT:
             return jsonify({"error": f"Unsupported font type: .{extension}"}), 400
-        FONTS_DIR.mkdir(parents=True, exist_ok=True)
         stem = re.sub(r"[^A-Za-z0-9_-]", "", Path(upload.filename).stem)[:40] or "font"
         stored = f"{stem}_{secrets.token_hex(4)}.{extension}"
-        upload.save(FONTS_DIR / stored)
+        try:
+            storage.backend().save(stored, upload.stream)
+        except (storage.StorageError, ValueError) as exc:
+            return jsonify({"error": f"Could not store the font: {exc}"}), 502
         db.set_setting(setting, stored)
 
     # Stars mode is validated against the known set rather than stored raw —

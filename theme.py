@@ -37,12 +37,34 @@ FONT_KEYS = (
 THEME_KEYS = tuple(COLOR_KEYS) + ("cell_radius", "font_display", "font_mono")
 
 
+def _expand(hex_value):
+    """#abc -> (170, 187, 204). Both CSS hex lengths, as three ints."""
+    digits = hex_value.lstrip("#")
+    if len(digits) == 3:
+        digits = "".join(c * 2 for c in digits)
+    return tuple(int(digits[i:i + 2], 16) for i in (0, 2, 4))
+
+
 def _colors(settings):
     out = []
     for key, prop in COLOR_KEYS.items():
         value = (settings.get(key) or "").strip()
         if value and HEX.match(value):
             out.append(f"  {prop}: {value};")
+
+    # The accent is not one colour but a family: a dim variant for borders and
+    # a translucent one for fills. Those were fixed greens, so choosing a new
+    # accent used to repaint the thin highlights and leave every border and
+    # filled panel behind — which read as "the colour did not change".
+    accent = (settings.get("accent_color") or "").strip()
+    if accent and HEX.match(accent):
+        red, green, blue = _expand(accent)
+        # ~38% toward black: dark enough to sit as a border against the page,
+        # light enough to stay recognisably the same hue.
+        dim = tuple(round(channel * 0.38) for channel in (red, green, blue))
+        out.append("  --green-dim: #%02x%02x%02x;" % dim)
+        out.append(f"  --green-bg: rgba({red}, {green}, {blue}, 0.05);")
+        out.append(f"  --green-soft: rgba({red}, {green}, {blue}, 0.12);")
     return out
 
 
@@ -57,7 +79,12 @@ def _radius(settings):
     return [f"  --cell-radius: {max(RADIUS_MIN, min(RADIUS_MAX, value))}px;"]
 
 
-def _fonts(settings):
+def _default_font_url(filename):
+    """Where an uploaded font lives when no resolver is supplied."""
+    return f"/static/fonts/{filename}"
+
+
+def _fonts(settings, font_url=_default_font_url):
     faces, variables = [], []
     for key, family, var in FONT_KEYS:
         filename = (settings.get(key) or "").strip()
@@ -66,7 +93,7 @@ def _fonts(settings):
         faces.append(
             "@font-face {\n"
             f"  font-family: '{family}';\n"
-            f"  src: url('/static/fonts/{filename}');\n"
+            f"  src: url('{font_url(filename)}');\n"
             "  font-weight: 400 700;\n"
             "  font-style: normal;\n"
             "  font-display: swap;\n"
@@ -76,9 +103,14 @@ def _fonts(settings):
     return faces, variables
 
 
-def css_overrides(settings):
-    """A stylesheet fragment for the current settings, or '' if none apply."""
-    faces, font_vars = _fonts(settings)
+def css_overrides(settings, font_url=_default_font_url):
+    """A stylesheet fragment for the current settings, or '' if none apply.
+
+    `font_url` resolves a stored font filename to a URL. It is injected because
+    uploaded fonts live wherever the storage backend puts them — local disk in
+    a plain copy, R2 on a host whose filesystem is wiped on every deploy.
+    """
+    faces, font_vars = _fonts(settings, font_url)
     declarations = _colors(settings) + _radius(settings) + font_vars
     if not declarations and not faces:
         return ""

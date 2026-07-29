@@ -60,6 +60,7 @@
       --green:         #39E8A0;
       --green-dim:     #1A6644;
       --green-bg:      rgba(57, 232, 160, 0.05);
+      --green-soft:    rgba(57, 232, 160, 0.12);
 
       /* Paid downloads — deliberately NOT --green. The accent is admin-
          configurable and could be set to anything, including a colour that
@@ -542,7 +543,7 @@
     }
     .star-btn:active {
       border-color: var(--green);
-      background: rgba(57, 232, 160, 0.1);
+      background: var(--green-soft);
     }
 
     /* Expand-to-fullscreen hint */
@@ -864,7 +865,7 @@
       white-space: nowrap;
     }
     .fs-btn i { font-size: 14px; }
-    .fs-btn:active { border-color: var(--green); background: rgba(57, 232, 160, 0.12); }
+    .fs-btn:active { border-color: var(--green); background: var(--green-soft); }
 
     /* Search bar */
     .search-row {
@@ -983,7 +984,7 @@
     .cat-btn.active .cat-front  { color: var(--green); background: hsl(0, 0%, 22%); }
     .cat-btn.active .cat-edge   {
       background: linear-gradient(to left,
-        var(--green-dim) 0%, #2c7d57 8%, #2c7d57 92%, var(--green-dim) 100%);
+        var(--green-dim) 0%, var(--green-dim) 8%, var(--green-dim) 92%, var(--green-dim) 100%);
     }
 
     /* ============================================================
@@ -1383,7 +1384,7 @@
        announce it even though nothing is drawn. -->
   <nav class="bottom-nav" aria-label="{{ t('nav.aria') }}">
     <span class="bnav-pill" id="bnavPill" aria-hidden="true"></span>
-    <button class="bnav-item active" data-view="wall" style="--c:#39E8A0"
+    <button class="bnav-item active" data-view="wall" style="--c:var(--green)"
             aria-label="{{ t('nav.wall') }}" aria-current="page">
       <i class="ti ti-layout-grid"></i>
     </button>
@@ -2333,7 +2334,8 @@
     if (p.includes('facebook'))  return '#1877F2';
     if (p.includes('behance'))   return '#1769FF';
     if (p.includes('twitter') || p === 'brand-x' || p === 'x') return '#FFFFFF';
-    if (p.includes('mail'))      return '#39E8A0';
+    /* Mail has no brand colour of its own, so it follows the accent — the
+       literal here meant it stayed green when the accent changed. */
     return 'var(--green)';
   }
 

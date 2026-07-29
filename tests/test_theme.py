@@ -111,13 +111,64 @@ def test_theme_settings_require_admin(client):
                        data={"accent_color": "#fff"}).status_code == 401
 
 
-def test_font_upload_stays_inside_the_test_directory(admin_client, tmp_path):
-    """Regression: the upload used to write into the real static/fonts."""
+def test_font_upload_goes_through_the_storage_backend(admin_client, tmp_path):
+    """Fonts must outlive a redeploy.
+
+    They used to be written straight into static/fonts, which on a host with
+    an ephemeral filesystem meant every deploy silently reverted the app to
+    its bundled fonts while the setting still named the uploaded file — a 404
+    inside a @font-face, which fails with no error anywhere.
+    """
     admin_client.post("/api/admin/settings", data={
         "font_display_file": (io.BytesIO(b"stub"), "Probe.woff2"),
     }, content_type="multipart/form-data")
 
-    import app as app_module
-    written = list(app_module.FONTS_DIR.glob("Probe_*.woff2"))
-    assert written, "upload did not land in the patched directory"
-    assert str(tmp_path) in str(written[0])
+    import storage
+    written = list((tmp_path / "media").glob("Probe_*.woff2"))
+    assert written, "upload did not reach the storage backend"
+    assert written[0].read_bytes() == b"stub"
+
+    # And the URL in the stylesheet must be the backend's, not a guessed path.
+    import database as db
+    import theme
+    css = theme.css_overrides(db.get_settings(),
+                              font_url=storage.backend().url)
+    assert f"/static/media/{written[0].name}" in css
+
+
+def test_uploaded_font_url_comes_from_the_resolver():
+    """A copy on R2 serves fonts from the bucket, not from this host."""
+    import theme
+    css = theme.css_overrides(
+        {"font_display": "MyFont.woff2"},
+        font_url=lambda name: f"https://cdn.example.com/{name}",
+    )
+    assert "url('https://cdn.example.com/MyFont.woff2')" in css
+
+
+def test_accent_choice_repaints_its_whole_family():
+    """Regression: --green changed while every border and fill stayed green.
+
+    The dim and translucent variants were fixed values, so a new accent only
+    moved the thin highlights — which read as the colour not changing.
+    """
+    import theme
+    css = theme.css_overrides({"accent_color": "#c8ff00"})
+    assert "--green: #c8ff00" in css
+    assert "--green-dim: #4c6100" in css
+    assert "--green-bg: rgba(200, 255, 0, 0.05)" in css
+    assert "--green-soft: rgba(200, 255, 0, 0.12)" in css
+
+
+def test_short_hex_accent_expands_before_deriving():
+    import theme
+    css = theme.css_overrides({"accent_color": "#f06"})
+    assert "--green-bg: rgba(255, 0, 102, 0.05)" in css
+
+
+def test_no_accent_means_no_derived_variables():
+    """The bundled defaults must stay in force when nothing is chosen."""
+    import theme
+    css = theme.css_overrides({"cell_radius": "4"})
+    assert "--green-dim" not in css
+    assert "--green-soft" not in css
