@@ -1,0 +1,28 @@
+# What `railway up` must never upload.
+#
+# Railway prefers this file over .gitignore when it exists, so everything
+# secret or local is repeated here rather than inherited. The container gets
+# its configuration from the service's Variables, never from a file.
+
+.env
+*.db
+*.sqlite3
+
+# Media lives in R2 in this deployment; local copies are just weight.
+static/media/*
+!static/media/.gitkeep
+
+# Runtime logs written by the local restart/tunnel scripts.
+app.out
+app.err
+tunnel.log
+tunnel.out
+
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+env/
+tests/
