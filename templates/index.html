@@ -61,6 +61,13 @@
       --green-dim:     #1A6644;
       --green-bg:      rgba(57, 232, 160, 0.05);
 
+      /* Paid downloads — deliberately NOT --green. The accent is admin-
+         configurable and could be set to anything, including a colour that
+         makes paid cards indistinguishable from free ones. A separate token
+         keeps "this one costs money" readable at any accent setting. */
+      --paid-accent:   #FFB020;
+      --paid-bg:       rgba(255, 176, 32, 0.08);
+
       /* Accent — distress red (likes, "new" badge) */
       --red:           #FF2A2A;
 
@@ -1037,6 +1044,65 @@
        which pushed the 1. 2. 3. markers outside the text box). */
     .post-reader-body ul, .post-reader-body ol { padding-left: 1.6em; margin: 8px 0; }
     .post-reader-body li { margin: 3px 0; }
+
+    /* ── Snippet preview ──────────────────────────────────────────────────
+       A live render of the post's code, above the body. The iframe is
+       sandboxed with allow-scripts but WITHOUT allow-same-origin, so the
+       snippet runs normally yet cannot reach this page, the admin session,
+       or cookies. No source is shown — getting the code means downloading. */
+    .snippet-preview {
+      width: 100%; height: 320px; border: 1px solid var(--border-raw);
+      border-radius: var(--cell-radius); margin: 14px 0 4px; display: block;
+    }
+    /* Alpha video and transparent assets render as a black box against most
+       backgrounds; the per-post choice makes them read as transparent. */
+    .snippet-preview.bg-dark   { background: #0A0A0A; }
+    .snippet-preview.bg-light  { background: #FFFFFF; }
+    .snippet-preview.bg-checker {
+      background-color: #999;
+      background-image:
+        linear-gradient(45deg, #666 25%, transparent 25%, transparent 75%, #666 75%),
+        linear-gradient(45deg, #666 25%, transparent 25%, transparent 75%, #666 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+    }
+
+    /* ── Downloads ────────────────────────────────────────────────────────
+       The download is the primary action. The support link beside it is
+       deliberately a quiet text link, not a second button competing with it —
+       downloading never waits on paying. */
+    .dl-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+              margin-top: 16px; }
+    .dl-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 11px 18px; cursor: pointer;
+      background: var(--green-bg); border: 1px solid var(--green);
+      color: var(--green); border-radius: var(--cell-radius);
+    }
+    .dl-btn:active { background: var(--green); color: var(--bg-page); }
+    .dl-btn.is-paid {
+      background: var(--paid-bg); border-color: var(--paid-accent);
+      color: var(--paid-accent);
+    }
+    .dl-btn.is-paid:active { background: var(--paid-accent); color: var(--bg-page); }
+    .dl-support {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em;
+      color: var(--text-secondary); text-decoration: underline;
+      text-underline-offset: 3px; cursor: pointer; background: none;
+      border: none; padding: 0;
+    }
+    .dl-support:active { color: var(--green); }
+
+    /* Paid post cards carry their price in the list, before they are opened. */
+    .post-card.is-paid { border-color: var(--paid-accent); }
+    .post-price {
+      font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em;
+      text-transform: uppercase; border: 1px solid var(--paid-accent);
+      color: var(--paid-accent); padding: 3px 8px;
+    }
+    .post-price.is-owned { border-color: var(--green); color: var(--green); }
+
     /* Post category + hashtag chips */
     .post-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 6px; }
     .post-card-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
@@ -1996,6 +2062,19 @@
          </div>`;
       card.querySelector('.post-card-title').textContent = p.title || 'Untitled';
       card.querySelector('.post-card-excerpt').textContent = p.excerpt || '';
+
+      /* Paid downloads are marked in the list, so "this one costs money" is
+         readable before opening. Its own colour, never the accent — see
+         --paid-accent. Once bought, the badge flips to the accent and reads
+         as owned rather than as a price still to pay. */
+      if (p.accessMode === 'paid' && p.priceStars > 0) {
+        card.classList.add('is-paid');
+        const badge = document.createElement('span');
+        badge.className = 'post-price' + (p.unlocked ? ' is-owned' : '');
+        badge.textContent = p.unlocked ? T('app.owned') : p.priceStars + '★';
+        card.querySelector('.post-card-meta').appendChild(badge);
+      }
+
       /* Category + hashtag chips on the card (same styling as the reader). */
       if ((p.categories && p.categories.length) || (p.hashtags && p.hashtags.length)) {
         const chipBox = document.createElement('div');
@@ -2053,11 +2132,51 @@
       postReader.appendChild(chips);
     }
 
+    /* Live snippet preview, above the body. Sandboxed with allow-scripts but
+       no allow-same-origin: the code runs, but cannot touch this page. */
+    if (post.snippet) {
+      const frame = document.createElement('iframe');
+      frame.className = 'snippet-preview bg-' + (post.previewBg || 'dark');
+      frame.setAttribute('sandbox', 'allow-scripts');
+      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('title', post.title || 'Preview');
+      frame.srcdoc = post.snippet;
+      postReader.appendChild(frame);
+    }
+
     /* Rich text body (admin-authored HTML). */
     const body = document.createElement('div');
     body.className = 'post-reader-body';
     body.innerHTML = post.body || '';
     postReader.appendChild(body);
+
+    /* Download row. Three shapes, from post.accessMode:
+         free         — just the button
+         free_donate  — the button plus a quiet "support this" link
+         paid         — price on the button until it is unlocked           */
+    if (post.downloadable) {
+      const needsPaying = post.accessMode === 'paid' && post.priceStars > 0
+                          && !post.unlocked;
+      const row = document.createElement('div');
+      row.className = 'dl-row';
+
+      const dl = document.createElement('button');
+      dl.className = 'dl-btn' + (needsPaying ? ' is-paid' : '');
+      dl.id = 'postDownloadBtn';
+      dl.innerHTML = '<i class="ti ti-download"></i><span>' +
+        (needsPaying ? `${post.priceStars}★ ${T('app.to_download')}`
+                     : T('app.download')) + '</span>';
+      row.appendChild(dl);
+
+      if (post.accessMode === 'free_donate') {
+        const tip = document.createElement('button');
+        tip.className = 'dl-support';
+        tip.id = 'postSupportBtn';
+        tip.textContent = T('app.support_this');
+        row.appendChild(tip);
+      }
+      postReader.appendChild(row);
+    }
 
     /* Gallery — same masonry layout as the main wall so images keep their
        natural proportions (no fixed-height cropping). Images and videos share
@@ -2138,8 +2257,62 @@
       } catch (err) { alert(T('app.invoice_unreachable')); return; }
       if (tg?.openInvoice) tg.openInvoice(invoiceUrl, () => {});
       else alert(T('app.open_in_telegram'));
+      return;
+    }
+
+    /* The quiet "support this" link beside a free download — same voluntary
+       donation as the Stars button, kept off the download's own path. */
+    if (e.target.closest('#postSupportBtn') && currentPost) {
+      let invoiceUrl;
+      try {
+        const res = await fetch('/api/post_invoice', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: currentPost.id, uid: UID }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || T('app.invoice_failed')); return; }
+        invoiceUrl = data.invoiceUrl;
+      } catch (err) { alert(T('app.invoice_unreachable')); return; }
+      if (tg?.openInvoice) tg.openInvoice(invoiceUrl, () => {});
+      else alert(T('app.open_in_telegram'));
+      return;
+    }
+
+    if (e.target.closest('#postDownloadBtn') && currentPost) {
+      const needsPaying = currentPost.accessMode === 'paid'
+                          && currentPost.priceStars > 0 && !currentPost.unlocked;
+      if (!needsPaying) { startDownload(currentPost.id); return; }
+
+      /* Paid: buy the unlock, then download once Telegram confirms. The
+         price is never sent — the server reads it from the post. */
+      let invoiceUrl;
+      try {
+        const res = await fetch('/api/post_unlock_invoice', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: currentPost.id, uid: UID }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || T('app.invoice_failed')); return; }
+        invoiceUrl = data.invoiceUrl;
+      } catch (err) { alert(T('app.invoice_unreachable')); return; }
+
+      if (!tg?.openInvoice) { alert(T('app.open_in_telegram')); return; }
+      tg.openInvoice(invoiceUrl, status => {
+        /* The poller records the unlock; re-open the post so the button
+           becomes a plain download. */
+        if (status === 'paid') openPost(currentPost.id);
+      });
     }
   });
+
+  /* A real navigation rather than fetch(): the browser and Telegram's in-app
+     browser both handle the Content-Disposition themselves, and neither needs
+     the whole archive held in memory first. */
+  function startDownload(postId) {
+    const url = '/api/post_download/' + postId + '?uid=' + encodeURIComponent(UID);
+    if (tg?.openLink) { tg.openLink(url); return; }
+    window.location.href = url;
+  }
 
   /* ============================================================
      SETTINGS — logo, About view, social links, intro splash

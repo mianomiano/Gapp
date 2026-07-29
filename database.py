@@ -143,6 +143,35 @@ def init_db():
         if col not in pcols:
             cur.execute(ddl)
 
+    # Migration: downloadable content and code snippets (owner's copy only —
+    # the whole feature is gated behind the downloads_enabled setting).
+    #
+    # access_mode defaults to 'free_donate' so every post that predates this
+    # migration stays downloadable with an optional tip, which is the least
+    # surprising behaviour: nothing silently becomes paid.
+    for col, ddl in (
+        ("access_mode",  "ALTER TABLE posts ADD COLUMN access_mode TEXT NOT NULL "
+                         "DEFAULT 'free_donate'"),
+        ("price_stars",  "ALTER TABLE posts ADD COLUMN price_stars INTEGER NOT NULL DEFAULT 0"),
+        ("snippet_html", "ALTER TABLE posts ADD COLUMN snippet_html TEXT NOT NULL DEFAULT ''"),
+        ("snippet_css",  "ALTER TABLE posts ADD COLUMN snippet_css TEXT NOT NULL DEFAULT ''"),
+        ("snippet_js",   "ALTER TABLE posts ADD COLUMN snippet_js TEXT NOT NULL DEFAULT ''"),
+        ("preview_bg",   "ALTER TABLE posts ADD COLUMN preview_bg TEXT NOT NULL DEFAULT 'dark'"),
+    ):
+        if col not in pcols:
+            cur.execute(ddl)
+
+    # Paid downloads are permanent per user, exactly like media unlocks. Kept
+    # in its own table rather than reusing `unlocks`, whose media_id column is
+    # NOT NULL and means something different.
+    cur.execute(
+        "CREATE TABLE IF NOT EXISTS post_unlocks ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "post_id INTEGER NOT NULL, tg_user_id TEXT NOT NULL,"
+        "created_at INTEGER NOT NULL DEFAULT 0,"
+        "UNIQUE(post_id, tg_user_id))"
+    )
+
     cur.execute(
         "CREATE TABLE IF NOT EXISTS post_likes ("
         "post_id INTEGER NOT NULL, tg_user_id TEXT NOT NULL,"
@@ -462,9 +491,15 @@ def add_post(title, body, category_ids="", hashtags="", min_stars=1):
     return new_id
 
 
+ACCESS_MODES = ("free", "free_donate", "paid")
+DEFAULT_ACCESS_MODE = "free_donate"
+PREVIEW_BGS = ("dark", "light", "checker")
+
+
 def update_post(post_id, fields):
     allowed = {"title", "body", "category_ids", "hashtags", "min_stars",
-               "show_stars"}
+               "show_stars", "access_mode", "price_stars", "snippet_html",
+               "snippet_css", "snippet_js", "preview_bg"}
     sets, values = [], []
     for key, val in fields.items():
         if key not in allowed:
@@ -475,6 +510,15 @@ def update_post(post_id, fields):
             val = normalize_category_ids(val)
         if key == "min_stars":
             val = max(1, int(val or 1))
+        # An unknown mode would make the post's price unreadable to every
+        # access check downstream, so it falls back rather than storing junk.
+        if key == "access_mode" and val not in ACCESS_MODES:
+            val = DEFAULT_ACCESS_MODE
+        if key == "preview_bg" and val not in PREVIEW_BGS:
+            val = "dark"
+        # Never negative: the price is billed verbatim and 0 means "free".
+        if key == "price_stars":
+            val = max(0, int(val or 0))
         sets.append(f"{key} = ?")
         values.append(val)
     if not sets:
@@ -639,6 +683,30 @@ def grant_unlock(media_id, tg_user_id):
         "INSERT OR IGNORE INTO unlocks (media_id, tg_user_id, created_at) "
         "VALUES (?, ?, ?)",
         (media_id, str(tg_user_id), int(time.time())),
+    )
+    conn.commit()
+    conn.close()
+
+
+def is_post_unlocked(post_id, tg_user_id):
+    """Whether this user has already paid for this post's download."""
+    if not tg_user_id:
+        return False
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT 1 FROM post_unlocks WHERE post_id = ? AND tg_user_id = ?",
+        (post_id, str(tg_user_id)),
+    ).fetchone()
+    conn.close()
+    return row is not None
+
+
+def grant_post_unlock(post_id, tg_user_id):
+    conn = get_conn()
+    conn.execute(
+        "INSERT OR IGNORE INTO post_unlocks (post_id, tg_user_id, created_at) "
+        "VALUES (?, ?, ?)",
+        (post_id, str(tg_user_id), int(time.time())),
     )
     conn.commit()
     conn.close()

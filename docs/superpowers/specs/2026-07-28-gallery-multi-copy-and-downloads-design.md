@@ -1,7 +1,8 @@
 # Gallery: multi-copy support, theming, and downloadable content
 
 **Date:** 2026-07-28
-**Status:** approved, not yet implemented
+**Status:** implemented. Sections 1–3 shipped 2026-07-28; Section 4 (downloads
+and snippets) shipped 2026-07-29.
 
 ## Goal
 
