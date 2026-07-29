@@ -392,6 +392,21 @@
     </form>
   </div>
 
+  <h2>{{ t('admin.tab_downloads') }}</h2>
+  <div class="card">
+    <p class="muted">{{ t('admin.downloads_hint') }}</p>
+    <form id="downloadsForm">
+      <div class="check">
+        <input type="checkbox" name="downloads_enabled" id="downloads_enabled" value="1">
+        <label for="downloads_enabled">{{ t('admin.downloads_enabled') }}</label>
+      </div>
+      <!-- An unchecked box is not submitted at all, so the marker is what
+           tells the server this form was saved. Same pattern as show_stars. -->
+      <input type="hidden" name="downloads_enabled_present" value="1">
+      <button type="submit">{{ t('admin.save') }}</button>
+    </form>
+  </div>
+
   </section><!-- /appearance -->
 
   <!-- ══ SETTINGS TAB ══ -->
@@ -771,10 +786,16 @@
     });
 
     /* ── Settings (logo / about / splash) ── */
+    /* Whether this copy offers downloads. Read once at load and used to decide
+       whether the per-post download fields render at all. */
+    let DOWNLOADS_ON = false;
+
     async function loadSettings() {
       const res = await fetch('/api/admin/settings');
       if (!res.ok) return onApiError(res);
       const s = await res.json();
+      DOWNLOADS_ON = s.downloads_enabled === '1';
+      document.getElementById('downloads_enabled').checked = DOWNLOADS_ON;
       document.getElementById('logo_text').value = s.logo_text || '';
       document.getElementById('about_text').value = s.about_text || '';
       document.getElementById('bot_username').value = s.bot_username || '';
@@ -801,6 +822,7 @@
         loadSettings();
       });
     }
+    settingsSubmit('downloadsForm', { reload: true });
     settingsSubmit('logoForm');
     settingsSubmit('aboutForm');
     settingsSubmit('telegramForm');
@@ -1047,6 +1069,7 @@
                <label>${T('admin.show_stars_item')}</label>
              </div>
              <input type="hidden" name="show_stars_present" value="1">
+             ${downloadFieldsHTML(p)}
              <label>Current media (× to delete)</label>
              <div class="post-media-manage" data-postmedia="${p.id}"><span class="muted">${T('admin.loading')}</span></div>
              <label>${T('admin.add_more_media')}</label>
@@ -1060,6 +1083,50 @@
         renderHashtags(entry.querySelector('form'));
       });
     }
+
+    /* Download settings for one post. Rendered only when the feature is on,
+       so a handed-over copy's post editor looks exactly as it did before. */
+    function downloadFieldsHTML(p) {
+      if (!DOWNLOADS_ON) return '';
+      const mode = p.access_mode || 'free_donate';
+      const bg = p.preview_bg || 'dark';
+      const opt = (v, label, current) =>
+        `<option value="${v}" ${v === current ? 'selected' : ''}>${label}</option>`;
+      return `
+        <label>${T('admin.access_mode')}</label>
+        <select name="access_mode" data-accessmode style="max-width:220px">
+          ${opt('free', T('admin.access_free'), mode)}
+          ${opt('free_donate', T('admin.access_free_donate'), mode)}
+          ${opt('paid', T('admin.access_paid'), mode)}
+        </select>
+        <div data-pricerow ${mode === 'paid' ? '' : 'hidden'}>
+          <label>${T('admin.price_stars')}</label>
+          <input type="number" name="price_stars" min="0"
+                 value="${p.price_stars || 0}" style="max-width:140px">
+        </div>
+        <label>${T('admin.snippet_html')}</label>
+        <textarea name="snippet_html" rows="4" spellcheck="false">${esc(p.snippet_html || '')}</textarea>
+        <label>${T('admin.snippet_css')}</label>
+        <textarea name="snippet_css" rows="4" spellcheck="false">${esc(p.snippet_css || '')}</textarea>
+        <label>${T('admin.snippet_js')}</label>
+        <textarea name="snippet_js" rows="4" spellcheck="false">${esc(p.snippet_js || '')}</textarea>
+        <small class="muted">${T('admin.snippet_hint')}</small>
+        <label>${T('admin.preview_bg')}</label>
+        <select name="preview_bg" style="max-width:220px">
+          ${opt('dark', T('admin.preview_dark'), bg)}
+          ${opt('light', T('admin.preview_light'), bg)}
+          ${opt('checker', T('admin.preview_checker'), bg)}
+        </select>`;
+    }
+
+    /* The price only means anything in 'paid' mode — hide it otherwise so a
+       leftover number never looks like it is in force. */
+    document.addEventListener('change', e => {
+      const select = e.target.closest('[data-accessmode]');
+      if (!select) return;
+      const row = select.closest('form')?.querySelector('[data-pricerow]');
+      if (row) row.hidden = select.value !== 'paid';
+    });
 
     async function loadPostMedia(postId) {
       const box = document.querySelector(`[data-postmedia="${postId}"]`);

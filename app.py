@@ -23,12 +23,13 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 from flask import (
-    Flask, jsonify, render_template, request, send_from_directory, session,
-    redirect, url_for, abort,
+    Flask, jsonify, render_template, request, send_file, send_from_directory,
+    session, redirect, url_for, abort,
 )
 from werkzeug.utils import secure_filename
 
 import database as db
+import downloads
 import i18n
 import imagesize
 import storage
@@ -163,6 +164,57 @@ def stars_visible(row):
     if mode == "checked":
         return bool(row["show_stars"])
     return True
+
+
+def downloads_enabled():
+    """Whether this copy offers downloadable content at all.
+
+    Off by default: a recipient's copy is a gallery, and switching the whole
+    section on is a deliberate act in the admin panel rather than something
+    that appears the moment they upgrade.
+    """
+    return (db.get_settings().get("downloads_enabled") or "") == "1"
+
+
+def post_access(post, tg_user_id=None):
+    """How this post may be downloaded, and whether this user may right now.
+
+    The price is read from the post row and never from the request — a
+    client-supplied price lets anyone edit a 500★ asset down to 1★. Every
+    caller that bills for a download gets its amount from here.
+    """
+    mode = post.get("access_mode") or db.DEFAULT_ACCESS_MODE
+    if mode not in db.ACCESS_MODES:
+        mode = db.DEFAULT_ACCESS_MODE
+    price = max(0, int(post.get("price_stars") or 0))
+    # A 'paid' post priced at zero would otherwise be unpayable *and*
+    # undownloadable — treat it as free rather than stranding the content.
+    paid = mode == "paid" and price > 0
+    return {
+        "mode": mode,
+        "price": price,
+        "paid": paid,
+        "unlocked": (not paid) or db.is_post_unlocked(post["id"], tg_user_id),
+    }
+
+
+def snippet_srcdoc(post):
+    """The post's snippet as one standalone document for the preview iframe.
+
+    Assembled server-side so the client never has to concatenate three fields
+    and get the ordering wrong. Empty string when the post has no snippet.
+    """
+    html_part = post.get("snippet_html") or ""
+    css = post.get("snippet_css") or ""
+    js = post.get("snippet_js") or ""
+    if not (html_part.strip() or css.strip() or js.strip()):
+        return ""
+    return (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        f"<style>{css}</style></head><body>{html_part}"
+        f"<script>{js}</script></body></html>"
+    )
 
 
 def media_public(item, tg_user_id=None):
@@ -366,11 +418,13 @@ def _post_hashtags(post):
 @app.route("/api/posts")
 def api_posts():
     uid = request.args.get("uid", "")
+    on = downloads_enabled()
     result = []
     for p in db.list_posts():
         media = db.list_post_media(p["id"])
         cover = media_url(media[0]["filename"]) if media else ""
         text = " ".join(re.sub(r"<[^>]+>", " ", p["body"] or "").split())
+        access = post_access(p, uid)
         result.append({
             "id": p["id"],
             "title": p["title"],
@@ -379,6 +433,11 @@ def api_posts():
             "count": len(media),
             "categories": _post_categories(p),
             "hashtags": _post_hashtags(p),
+            # The card needs the price before the post is opened, so a paid
+            # one can be styled and badged in the list.
+            "accessMode": access["mode"] if on else "",
+            "priceStars": access["price"] if on else 0,
+            "unlocked": access["unlocked"] if on else False,
         })
     return jsonify(result)
 
@@ -395,6 +454,8 @@ def api_post_one(post_id):
     # One list, uncapped. This used to truncate images to 15 with no warning
     # and split them from videos, which the client immediately re-merged.
     media = db.list_post_media(post_id)
+    access = post_access(post, uid)
+    on = downloads_enabled()
     return jsonify({
         "id": post["id"],
         "title": post["title"],
@@ -406,6 +467,14 @@ def api_post_one(post_id):
         "liked": db.user_liked_post(post_id, uid),
         "minStars": post["min_stars"],
         "showStars": stars_visible(post),
+        # Downloads — all four collapse to off/empty when the feature is
+        # disabled, so the front-end needs no separate feature check.
+        "downloadable": on,
+        "accessMode": access["mode"] if on else "",
+        "priceStars": access["price"] if on else 0,
+        "unlocked": access["unlocked"] if on else False,
+        "previewBg": post.get("preview_bg") or "dark",
+        "snippet": snippet_srcdoc(post) if on else "",
     })
 
 
@@ -435,6 +504,77 @@ def api_post_invoice():
     payload = f"P{post['id']}|{uid}|donation"
     title = ("Support: " + (post["title"] or brand_name()))[:32]
     description = f"Send {amount}★ to support this post."[:255]
+    try:
+        resp = requests.post(
+            f"{TELEGRAM_API}/createInvoiceLink",
+            json={"title": title, "description": description, "payload": payload,
+                  "currency": "XTR", "prices": [{"label": "Stars", "amount": amount}]},
+            timeout=15,
+        )
+        body = resp.json()
+    except requests.RequestException as exc:
+        return jsonify({"error": f"Telegram request failed: {exc}"}), 502
+    if not body.get("ok"):
+        return jsonify({"error": body.get("description", "createInvoiceLink failed")}), 502
+    return jsonify({"invoiceUrl": body["result"], "amount": amount})
+
+
+@app.route("/api/post_download/<int:post_id>")
+def api_post_download(post_id):
+    """Send the post as a ZIP, after checking this user may have it.
+
+    A GET so the browser and Telegram's in-app browser can both take it as a
+    normal download. The unlock is verified here, before anything is built —
+    see downloads.py, which deliberately performs no access checks itself.
+    """
+    if not downloads_enabled():
+        return jsonify({"error": "Downloads are not enabled."}), 404
+    post = db.get_post(post_id)
+    if not post:
+        return jsonify({"error": "Unknown post."}), 404
+
+    uid = request.args.get("uid", "")
+    access = post_access(post, uid)
+    if not access["unlocked"]:
+        # 402 rather than 403: the client turns this into "pay to download"
+        # instead of an error, and the price it needs is in the body.
+        return jsonify({"error": "This download must be unlocked first.",
+                        "priceStars": access["price"]}), 402
+
+    media = db.list_post_media(post_id)
+    archive = downloads.build_zip(post, media, storage.backend().open)
+    filename = downloads.slugify(post["title"], post_id) + ".zip"
+    return send_file(archive, mimetype="application/zip",
+                     as_attachment=True, download_name=filename)
+
+
+@app.route("/api/post_unlock_invoice", methods=["POST"])
+def api_post_unlock_invoice():
+    """Telegram Stars invoice to buy a paid download.
+
+    Separate from /api/post_invoice on purpose. That one bills an amount the
+    visitor chose; this one bills posts.price_stars and nothing else. Sharing
+    an endpoint would put a client-supplied amount one refactor away from the
+    paid path — see the spec's "two invoice paths, different trust levels".
+    """
+    if not BOT_TOKEN:
+        return jsonify({"error": "BOT_TOKEN not configured on the server."}), 503
+    if not downloads_enabled():
+        return jsonify({"error": "Downloads are not enabled."}), 404
+    data = request.get_json(silent=True) or {}
+    post = db.get_post(int(data["postId"])) if data.get("postId") else None
+    if not post:
+        return jsonify({"error": "Unknown post."}), 404
+
+    access = post_access(post, str(data.get("uid") or ""))
+    if not access["paid"]:
+        return jsonify({"error": "This post is not a paid download."}), 400
+
+    uid = str(data.get("uid") or "")
+    amount = access["price"]           # from the row, never from the request
+    payload = f"D{post['id']}|{uid}|download"
+    title = ("Download: " + (post["title"] or brand_name()))[:32]
+    description = f"Unlock the download for {amount}★."[:255]
     try:
         resp = requests.post(
             f"{TELEGRAM_API}/createInvoiceLink",
@@ -755,7 +895,9 @@ def admin_update_post(post_id):
     if not db.get_post(post_id):
         abort(404)
     fields = {}
-    for key in ("title", "body", "hashtags", "min_stars"):
+    for key in ("title", "body", "hashtags", "min_stars",
+                "access_mode", "price_stars", "snippet_html", "snippet_css",
+                "snippet_js", "preview_bg"):
         if key in request.form:
             fields[key] = request.form.get(key, "")
     if "category_ids_present" in request.form:
@@ -837,6 +979,12 @@ def admin_set_settings():
                 "contact_chat_id") + theme.THEME_KEYS:
         if key in request.form:
             db.set_setting(key, request.form.get(key, "").strip())
+
+    # Checkbox: an unchecked box is not submitted, so the marker field is what
+    # distinguishes "saved as off" from "this form was not part of the post".
+    if "downloads_enabled_present" in request.form:
+        on = request.form.get("downloads_enabled") in ("1", "true", "on")
+        db.set_setting("downloads_enabled", "1" if on else "0")
 
     # Font uploads. Separate field names from the settings keys, so the stored
     # value stays the randomised filename we chose rather than anything the
@@ -988,6 +1136,17 @@ def _handle_update(update):
     uid = parts[1] if len(parts) > 1 and parts[1] else (
         str(message.get("from", {}).get("id", "")))
     purpose = parts[2] if len(parts) > 2 else "donation"
+
+    # Paid download — payload starts with 'D<post_id>'. Checked before the
+    # 'P' branch below because both are post payments; only this one grants
+    # permanent access to the archive.
+    if first.startswith("D") and first[1:].isdigit():
+        post_id = int(first[1:])
+        db.record_donation(None, uid, amount, "download", post_id=post_id)
+        if uid:
+            db.grant_post_unlock(post_id, uid)
+        print(f"[stars] download unlocked: post={post_id} uid={uid} amount={amount}")
+        return
 
     # Post donation — payload starts with 'P<post_id>'.
     if first.startswith("P") and first[1:].isdigit():
